@@ -3,7 +3,7 @@
 ## FIRST: Read Core Rules
 
 **Before doing any work, read the AssemblyZero core rules:**
-`C:\Users\mcwiz\Projects\AssemblyZero\CLAUDE.md`
+https://github.com/martymcenroe/AssemblyZero/blob/main/CLAUDE.md
 
 That file contains core rules that apply to ALL projects and ALL agents:
 - Bash command rules (no &&, |, ;)
@@ -26,8 +26,9 @@ That file contains core rules that apply to ALL projects and ALL agents:
 
 **Project:** Exedra
 **Repository:** martymcenroe/Exedra
-**Project Root (Windows):** C:\Users\mcwiz\Projects\Exedra
-**Project Root (Unix):** /c/Users/mcwiz/Projects/Exedra
+
+This repository is public and gets forked. Use repo-relative paths, and do not
+assume a particular machine or checkout location.
 
 ---
 
