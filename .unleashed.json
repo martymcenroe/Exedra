@@ -1,0 +1,9 @@
+{
+  "profile": "default",
+  "assemblyZero": true,
+  "onboard": {
+    "auto": true,
+    "guide": null,
+    "plan": null
+  }
+}

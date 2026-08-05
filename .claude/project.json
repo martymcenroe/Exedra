@@ -1,0 +1,11 @@
+{
+  "variables": {
+    "PROJECT_ROOT": "/c/Users/mcwiz/Projects/Exedra",
+    "PROJECT_ROOT_WINDOWS": "C:\\Users\\mcwiz\\Projects\\Exedra",
+    "PROJECT_NAME": "Exedra",
+    "GITHUB_REPO": "martymcenroe/Exedra",
+    "TOOLS_DIR": "/c/Users/mcwiz/Projects/Exedra/tools",
+    "WORKTREE_PATTERN": "Exedra-{ID}"
+  },
+  "inherit_from": "C:\\Users\\mcwiz\\Projects\\AssemblyZero"
+}
