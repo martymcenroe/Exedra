@@ -54,8 +54,7 @@ Exedra/
 ├── GEMINI.md                   # Gemini agent instructions
 ├── README.md                   # Project overview
 ├── LICENSE                     # PolyForm Noncommercial 1.0.0
-├── .gitignore                  # Git ignore rules
-└── .unleashed.json             # Unleashed wrapper config
+└── .gitignore                  # Git ignore rules
 ```
 
 ---

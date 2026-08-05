@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /c/Users/mcwiz/Projects/Exedra/.claude/hooks/secret-file-guard.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/secret-file-guard.sh\"",
             "timeout": 5,
             "description": "Secret File Guard (blocks file tools on .env, credentials)"
           }

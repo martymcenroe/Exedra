@@ -57,8 +57,9 @@ coverage.xml
 # Build artifacts
 *.generated.json
 
-# Unleashed session transcripts (auto-generated, untracked)
-data/unleashed/
+# Ephemeral session artifacts: transcripts, run logs, pickup state.
+# Durable data belongs in data-g/ (see data-g/README.md).
+data/
 
 # Agent-parked files (mv $file $file.bak / $file.parked-{timestamp})
 # CLAUDE.md "Destroying uncommitted state" principle: the agent uses

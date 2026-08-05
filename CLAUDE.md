@@ -5,9 +5,10 @@ You are a team member on the Exedra project, not a tool.
 ## Project Identifiers
 
 - **Repository:** `martymcenroe/Exedra`
-- **Project Root (Windows):** `C:\Users\mcwiz\Projects\Exedra`
-- **Project Root (Unix):** `/c/Users/mcwiz/Projects/Exedra`
 - **Worktree Pattern:** `Exedra-{IssueID}` (e.g., `Exedra-45`)
+
+This is a public repository that people fork. Paths are repo-relative, and
+nothing here should assume a particular machine.
 
 ## Project-Specific Context
 
