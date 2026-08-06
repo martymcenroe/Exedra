@@ -1,0 +1,70 @@
+// Deployment configuration for the Palaestra worker, published for inspection.
+//
+// This file enumerates every external resource the running service can reach.
+// A Cloudflare Worker can only touch what its bindings and code allow, so this
+// is the complete surface, not a summary of it.
+//
+// Two values are redacted, and both redactions are marked. Nothing else is
+// changed from the deployed file.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "palaestra",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "routes": [
+    {
+      "pattern": "palaestra.thrivetech.ai",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "palaestra",
+      // A Cloudflare database identifier. Not a credential: reaching it
+      // requires account authentication that lives nowhere in this repository.
+      "database_id": "cc237259-1cda-4475-8725-8063c642724d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PACKS",
+      "bucket_name": "palaestra-packs"
+    }
+  ],
+  // Operator-only mail. destination_address is a hard restriction rather than
+  // a default: this binding physically cannot deliver to a player, so no bug
+  // in notification code can turn an internal alert into mail to a stranger.
+  "send_email": [
+    {
+      "name": "OPERATOR_MAIL",
+      "destination_address": "<REDACTED: operator's personal address>"
+    }
+  ],
+  "vars": {
+    // Public by construction. This identifier travels in the address bar of
+    // every sign-in, so publishing it discloses nothing.
+    "LINKEDIN_CLIENT_ID": "8624snv1vkl69m",
+    "OPERATOR_EMAIL": "<REDACTED: operator's personal address>",
+    // Admin allowlist, comma-separated player ids. Deliberately configuration
+    // rather than a database column: administrative access cannot be granted
+    // by anything the running application does, only by a deployment.
+    //
+    // Redacted because it names an account worth attacking. It is not itself a
+    // credential: using it would require signing in as that person through
+    // LinkedIn.
+    "ADMIN_PLAYER_IDS": "<REDACTED: one player id>"
+  }
+  // Secrets are set through the deployment platform and appear in no file in
+  // either repository: SESSION_SECRET, LINKEDIN_CLIENT_SECRET.
+}

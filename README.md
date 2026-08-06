@@ -69,12 +69,16 @@ is actually in the tree today.
 If you arrived early and want to help, the wiki is the specification. Read
 [Goals](https://github.com/martymcenroe/Exedra/wiki/Goals) first.
 
-## One thing not to do
+## Evaluating the venue rather than building on it
 
-The engine, the scoring function, the schema, and the gate are copied in from
-the platform, so a change to any of them is made upstream rather than here.
-[Hydration](https://github.com/martymcenroe/Exedra/wiki/Hydration) explains why,
-and what to send instead.
+If you are deciding whether `palaestra.thrivetech.ai` is safe to allow or sign
+in to, read [SECURITY.md](SECURITY.md). It states which hosts the software
+contacts, what runs in the browser, what is collected, and what is refused, and
+it links to copies of the running code in [`inspect/`](inspect/) so every claim
+can be checked.
+
+The short version: the browser contacts no external host at all, and the server
+contacts LinkedIn and nothing else.
 
 ## Licence
 
