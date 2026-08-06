@@ -1,105 +1,45 @@
-# Security and network behaviour
+# Security
 
-For anyone deciding whether to allow, integrate with, or sign in to
-[palaestra.thrivetech.ai](https://palaestra.thrivetech.ai). Every claim below
-can be checked against published source, linked at the end.
+Palaestra is a browser-based teaching simulation at
+[palaestra.thrivetech.ai](https://palaestra.thrivetech.ai). It is
+noncommercial, sells nothing, and processes no payments.
 
-## What the site is
+## Reviewing the service
 
-A browser-based teaching simulation. A player runs a data center against a
-simulated electricity grid for a simulated day and receives a score. It is
-noncommercial and there is nothing to buy.
+Two pages, maintained in the wiki:
 
-## Hosts the software contacts
+- **[Security Review](https://github.com/martymcenroe/Exedra/wiki/Security-Review)**
+  — hosts contacted, the sign-in flow hop by hop, sessions, authorization,
+  secrets, unauthenticated endpoints, logging, supply chain.
+- **[Privacy Review](https://github.com/martymcenroe/Exedra/wiki/Privacy-Review)**
+  — data held with purpose and retention, what is refused, sub-processors,
+  cookies, and how each right is exercised.
 
-| Origin | When | Why |
-|---|---|---|
-| `palaestra.thrivetech.ai` | Throughout | The application and its API. |
-| `www.linkedin.com` | Sign-in only | The OAuth consent screen, as a top-level page navigation. |
-| `api.linkedin.com` | Sign-in only | Server to server, to exchange the authorization code for the name and email address of the person signing in. |
+Two facts that decide most questions:
 
-**Nothing else.** The browser makes network requests to the site's own origin
-and to no other host at any point.
+- The browser contacts no host other than `palaestra.thrivetech.ai`. No CDN,
+  analytics, web font, advertising network, tracker, or error-reporting
+  service.
+- The server contacts `www.linkedin.com` and `api.linkedin.com`, during
+  sign-in only, and nothing else.
 
-There is no content delivery network, no analytics, no web fonts, no
-advertising, no tracking pixel, and no error-reporting service. The only
-external strings present in the built JavaScript are the SVG XML namespace and
-two documentation URLs inside a markdown library's error messages. None of them
-is ever fetched.
+## If you filter traffic
 
-The sign-in flow returns the browser to
-`palaestra.thrivetech.ai/api/auth/callback`. A filter that permits the site but
-blocks that path will fail sign-in after the user has already authenticated.
+Sign-in sends the browser to LinkedIn and **back to this site**, at
+`https://palaestra.thrivetech.ai/api/auth/callback`. Permitting
+`palaestra.thrivetech.ai` but blocking that URL fails sign-in after the user
+has already authenticated, which the user experiences as the site being broken.
 
-## What executes in the browser
+## Verify
 
-A static single-page application: JavaScript, HTML and CSS, served from the
-site's own origin.
+Copies of the running code are in [`inspect/`](inspect/): the sign-in flow,
+session signing, the unauthenticated endpoint, the connection check, the
+privacy policy source, and the deployment binding configuration with two values
+redacted and marked.
 
-No downloads are offered. No plugin, extension, or local agent is required or
-suggested. Nothing is uploaded. There is no file sharing, no messaging between
-users, and no user-supplied content rendered to other users.
+## Reporting
 
-## Sign-in
+Vulnerabilities and security questions: `support@palaestra.thrivetech.ai`.
+Erasure requests: `GDPR-request@palaestra.thrivetech.ai`.
 
-LinkedIn OpenID Connect, and no other provider. There is no password anywhere
-in the system, so none is created, transmitted, stored, or recoverable.
-
-The session is a cookie holding an HMAC signature over an internal player
-identifier, verified by the server against a secret the browser never sees. It
-is not a bearer token for any third-party service. The cookie is `HttpOnly`,
-`Secure`, `SameSite=Lax`, scoped to the site, and expires after thirty days.
-
-## What is collected
-
-Name, email address, and LinkedIn's stable subject identifier. The gameplay a
-player produces. The time of each sign-in.
-
-## What is refused
-
-LinkedIn returns a profile photo URL whether it is requested or not. It is
-discarded, not stored, not displayed, not logged.
-
-No IP address is stored. No location. No device fingerprint. Sign-in records
-keep the time and nothing else, and are deleted automatically after ninety
-days.
-
-Nothing is sold, and nothing is shared with advertisers or data brokers.
-
-## Erasure
-
-Any person may have every record associated with them deleted, by email,
-honored within thirty days. The right does not depend on where they live or
-whether any particular regulation covers them. Everything held about a player
-is also downloadable by that player at any time.
-
-## Diagnostics
-
-`/connection-check` reports what is working from the visitor's own browser:
-whether the site answers, clock accuracy, whether cookies can be stored,
-whether a session exists, and whether the page's code matches the server's.
-
-It measures only properties of that browser. It does not probe, trace, or
-describe the network the visitor is on, and it transmits nothing unless the
-visitor presses send on a problem report.
-
-## Verify any of this
-
-Copies of the running code are in [`inspect/`](inspect/):
-
-- [`inspect/worker/auth.ts`](inspect/worker/auth.ts) for the sign-in flow
-- [`inspect/worker/session.ts`](inspect/worker/session.ts) for the cookie
-- [`inspect/web/privacy-policy.tsx`](inspect/web/privacy-policy.tsx) for what is collected
-- [`inspect/web/connection-check.tsx`](inspect/web/connection-check.tsx) for the diagnostic
-- [`inspect/wrangler.jsonc`](inspect/wrangler.jsonc) for every external resource the server can reach
-
-The published policy is also live at
-[palaestra.thrivetech.ai/privacy-policy](https://palaestra.thrivetech.ai/privacy-policy).
-
-## Reporting a problem
-
-Security concerns: `support@palaestra.thrivetech.ai`. Erasure requests:
-`GDPR-request@palaestra.thrivetech.ai`.
-
-If something here does not match what the service actually does, that is worth
-telling us, and a GitHub issue on this repository is the fastest route.
+There is no bounty programme. Reports are read and answered.
