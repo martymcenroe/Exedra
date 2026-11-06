@@ -109,6 +109,10 @@
               "type": "number",
               "minimum": 0,
               "description": "What the chosen fuel supply can deliver this hour (#469), once one is chosen."
+            },
+            "fuel": {
+              "type": "string",
+              "description": "The fuel the plant is on (#707): \"gas\" or the alternate fuel's id; present only on packs with an alternate fuel."
             }
           }
         },
@@ -183,6 +187,10 @@
         "supply": {
           "type": "string",
           "description": "The fuel supply option's id (#469), read only on turn 0."
+        },
+        "fuel": {
+          "type": "string",
+          "description": "The fuel the plant burns from this turn on (#707): \"gas\" or the alternate fuel's id. Absent keeps last turn's fuel. On packs with an alternate fuel the applied action names it every turn."
         }
       }
     },

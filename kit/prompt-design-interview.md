@@ -78,6 +78,7 @@ Do not rebuild one of these:
 - S-20 The Waiver
 - S-21 Twelve Hours Dark
 - S-22 The Same Afternoon
+- S-23 The Barge
 
 The venue keeps adding scenarios, so check the current list at
 https://palaestra.thrivetech.ai/api/scenarios if you can read the web. A new day that tests the
@@ -100,7 +101,8 @@ The screen shows, each hour:
   hours;
 - the site's IT demand, battery charge, and permit hours left;
 - the open events, and the running totals of cost and reliability;
-- whatever the pack carries of fuel price, gas available, import limit, stocks, and commitments.
+- whatever the pack carries of fuel price, gas available, the generator's fuel, import limit,
+  stocks, and commitments.
 
 ### What the player does each hour
 
@@ -115,6 +117,8 @@ The screen shows, each hour:
 - The player accepts an open appeal to collect its credit.
 - The player names a commitment's MW on its decision turn, and chooses a fuel supply option on the
   first turn.
+- On a generator with a second fuel, the player names the fuel it burns. It burns one fuel each
+  hour and stays on the last one named.
 
 The battery and the generator serve only the site's own load, and neither exports anything to the
 grid.
@@ -130,6 +134,9 @@ grid.
   gas that hour.
 - `site.stocks` holds consumables the generator burns per MWh, such as water or fuel on hand, with
   deliveries on given turns, and the generator stops when any stock reaches zero.
+- `site.diesel.alternate_fuel` gives the generator a second fuel at its own price, such as fuel
+  oil. In an hour on that fuel the generator takes no gas, so supply options and nominations count
+  none. A stock marked `burns_on` with that fuel's id burns only in those hours.
 
 ### The grid
 
@@ -200,7 +207,7 @@ Table 1. Star awards by a play's cost against the certified optimum.
 - No other player acts during a pack.
 - The engine holds no decision beyond one pack's turns. A future campaign layer would add capital
   budgets, new construction, permits earned as rewards, and multiyear play.
-- The generator cannot switch fuels from hour to hour.
+- The generator burns at most two fuels, and never both in the same hour.
 - An emergency order cannot grant a fixed number of extra hours, because the only form built
   suspends the permit count.
 - The engine has no randomness at play time, and a day meant to earn stars has hour-long turns.

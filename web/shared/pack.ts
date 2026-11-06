@@ -22,6 +22,21 @@ export interface Stock {
   capacity: number;
   burn_per_mwh_generated: number;
   deliveries?: StockDelivery[];
+  /** The alternate fuel's id (#707): the stock burns, and binds the plant,
+   * only on turns the plant runs on that fuel. Absent = every fuel. */
+  burns_on?: string;
+}
+
+/**
+ * The plant's second fuel (#707). The plant burns pipeline gas or this, one
+ * per turn, chosen through Action.fuel and kept until the player switches.
+ * On a turn on this fuel the plant takes no gas, so nothing that limits or
+ * settles gas reads its output, and the output is priced here.
+ */
+export interface AlternateFuel {
+  id: string;
+  label: string;
+  fuel_usd_per_mwh: number;
 }
 
 export interface ConservationAppeal {
@@ -272,6 +287,9 @@ export interface ScenarioPack {
       /** Optional supply arrangements (#469), one chosen at turn 0. Absent =
        * unlimited supply at no premium, bit-identical to engine 0.7.0. */
       supply_options?: SupplyOption[];
+      /** Optional second fuel (#707), chosen each turn through Action.fuel.
+       * Absent = one fuel, bit-identical to engine 0.13.0. */
+      alternate_fuel?: AlternateFuel;
     };
     stocks?: Stock[];
   };
@@ -366,6 +384,8 @@ export function siteView(site: ScenarioPack["site"]): SiteView {
       initial: s.initial,
       capacity: s.capacity,
       burn_per_mwh_generated: s.burn_per_mwh_generated,
+      // Which fuel draws it down (#707) is a term of the plant, not fog.
+      ...(s.burns_on !== undefined && { burns_on: s.burns_on }),
     })),
   };
 }

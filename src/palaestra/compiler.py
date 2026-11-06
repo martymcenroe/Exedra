@@ -458,9 +458,10 @@ class StockDict(TypedDict, total=False):
     capacity: float
     burn_per_mwh_generated: float
     deliveries: list[StockDeliveryDict]
+    burns_on: str
 
 
-def validate_stocks(stocks: list[dict], turns: int) -> None:
+def validate_stocks(stocks: list[dict], turns: int, alternate_fuel: str | None = None) -> None:
     """Validate cross-field stock invariants: uniqueness, bounds, and delivery turn limits."""
     seen_ids = set()
     for stock in stocks:
@@ -478,6 +479,11 @@ def validate_stocks(stocks: list[dict], turns: int) -> None:
             )
         if stock["burn_per_mwh_generated"] < 0:
             raise ValueError(f"stock '{stock_id}' burn_per_mwh_generated must be non-negative")
+        # A stock bound to a fuel (#707) needs that fuel on the plant, or it never burns.
+        if "burns_on" in stock and stock["burns_on"] != alternate_fuel:
+            raise ValueError(
+                f"stock '{stock_id}' burns_on {stock['burns_on']!r} names no alternate fuel on the plant"
+            )
         seen_turns = set()
         for delivery in stock.get("deliveries", []):
             if delivery["quantity"] < 0:
@@ -502,6 +508,9 @@ def validate_commitments(commitments: list[dict], turns: int) -> None:
         if cid == "supply":
             # The local runner reads supply=id as the fuel supply choice (#469).
             raise ValueError("commitment supply: the id is reserved for the fuel supply choice")
+        if cid == "fuel":
+            # And fuel=id as a dual-fuel plant's fuel (#707).
+            raise ValueError("commitment fuel: the id is reserved for the plant's fuel")
         seen.add(cid)
         if not 0 <= c["decision_turn"] < turns:
             raise ValueError(f"commitment {cid}: decision_turn outside 0..{turns - 1}")
@@ -601,6 +610,11 @@ def validate_fuel_supply(diesel: dict, turns: int) -> None:
         seen.add(oid)
         if len(option["available_mw"]) != turns:
             raise ValueError(f"supply option {oid}: available_mw length != turns")
+    # "gas" is what Action.fuel names the first fuel (#707); the schema refuses
+    # it too, and this says why to a contributor reading the compiler.
+    alt = diesel.get("alternate_fuel")
+    if alt is not None and alt["id"] == "gas":
+        raise ValueError("site.diesel.alternate_fuel: the id 'gas' names the plant's first fuel")
 
 
 def validate_pack(pack: dict) -> None:
@@ -609,7 +623,8 @@ def validate_pack(pack: dict) -> None:
     # Cross-field invariants the schema cannot express:
     n = pack["turns"]
     if "stocks" in pack.get("site", {}):
-        validate_stocks(pack["site"]["stocks"], n)
+        alt = pack["site"]["diesel"].get("alternate_fuel")
+        validate_stocks(pack["site"]["stocks"], n, alt["id"] if alt else None)
     validate_fuel_supply(pack["site"]["diesel"], n)
     for path, arr in (
         ("site.it_load_mw", pack["site"]["it_load_mw"]),
@@ -1105,6 +1120,8 @@ S11_TRUCK_PROMISED_TURN = 30    # day 2, 06:00, as the brief promises
 # perfectly finishes about 1.7% above the certified line, outside gold's 1%.
 S11_TRUCK_ACTUAL_TURN = 69
 S11_PERMIT_HOURS = 24           # permits to spare: the tank binds first
+# Day 2's appeal notice carries it (S-23, #473, takes it back out).
+S11_TRUCK_NOTE = " The water truck due at dawn is late, and the carrier names no new time."
 
 S11_BRIEF_MD = """\
 ## S-11 · The Consumables Cliff
@@ -1201,7 +1218,7 @@ def compile_s11(rows: list[HourlyLoad]) -> dict:
     # The first notice after the promised hour says the truck has not come,
     # which the tank has already shown. It names no new time, because the
     # carrier has none to give.
-    truck_note = " The water truck due at dawn is late, and the carrier names no new time."
+    truck_note = S11_TRUCK_NOTE
     assert appeals[1] and appeals[1][0] - 1 > S11_TRUCK_PROMISED_TURN, "day-2 appeal precedes the promise"
     events: list[dict] = []
     for k in range(3):
@@ -2856,6 +2873,196 @@ def compile_s22(rows: list[HourlyLoad]) -> dict:
     return pack
 
 
+# --- S-23 The Barge (#473) ------------------------------------------------------
+# The Winter 2026 Arctic Events report (FERC/NERC joint staff): ISO-NE leaned on
+# fuel oil as the cold ran on, barges carried it from Philadelphia, New York and
+# the Caribbean, and ice on the Hudson blocked the docks until the Coast Guard
+# cleared it (p. 18); PJM directed dual-fuel units back to gas to preserve oil
+# (p. 17); weekend spot gas was illiquid (p. 22); non-firm shippers lose
+# priority on New England's full pipelines, and dual-fuel units hold no firm
+# gas (p. 35). S-23 is S-11's three days, named Friday to Sunday as S-18 names
+# its days, on a dual-fuel plant (#707): Friday's gas bought as burned, the
+# weekend's under one nomination on interruptible transport that is all the
+# gas there is, and fuel oil from a tank whose barge comes after the third
+# evening.
+S23_DAYS = ("Friday", "Saturday", "Sunday")
+# The weekend's gas at the report's spike, both days: S-18's Saturday figure.
+S23_WEEKEND_FUEL_USD_PER_MWH = S18_SATURDAY_FUEL_USD_PER_MWH
+# Interruptible transport on a full pipe: the most the pipeline schedules for
+# the plant on the weekend, half its rating. A teaching number. A sweep on
+# 2026-11-06 found that at the plant's full rating the certified line burns no
+# oil at all: a high nomination covers every weekend peak with gas, and oil on
+# an hour under it pays more in imbalance than it saves.
+S23_NOMINATION_MAX_MW = 30.0
+# A teaching number of the right order for distillate, between Friday's gas
+# and the weekend's: about $19/MMBtu at the 10 MMBtu/MWh heat rate S-18 uses.
+S23_OIL_USD_PER_MWH = 190.0
+# About 10 MMBtu/MWh at 5.8 MMBtu a barrel of No. 2 fuel oil.
+S23_OIL_BBL_PER_MWH = 1.75
+# Three hours at full output. A sweep on 2026-11-06 placed it: believe the
+# promise and the turn-0 optimum nominates no weekend gas, and the best play
+# after that finishes 1.78% above the certified line, outside gold's 1%
+# (tests/unit/test_s23_pack.py holds it). With four hours the same player
+# finishes 0.73% above it, so believing the brief cost nothing.
+S23_OIL_INITIAL_BBL = 315.0        # 180 MWh
+S23_OIL_CAPACITY_BBL = 1260.0      # twelve hours
+S23_BARGE_BBL = 945.0              # nine more hours
+S23_BARGE_PROMISED_TURN = 30       # Saturday 06:00, as the brief promises
+S23_BARGE_ACTUAL_TURN = 69         # Sunday 21:00, after the third order
+S23_BARGE_NOTICE_TURN = S23_BARGE_PROMISED_TURN + 1
+# The water is injected only when the plant fires oil: eight hours of it, one
+# for each weekend peak hour, so a player who believes the barge plans the
+# weekend's evenings on oil to the last hour of water.
+S23_WATER_INITIAL_M3 = 120.0
+S23_WEEKEND = list(range(24, 72))  # Saturday 00:00 to Sunday 23:00
+
+S23_BRIEF_MD = """\
+## S-23 · The Barge
+
+The cold lasts three days, Friday to Sunday, and the plant burns two fuels.
+
+The evenings are the Consumables Cliff's: three conservation appeals and
+three curtailment orders, for 30, 40 and 40 MW. Your 60 MW plant holds
+twenty-four permitted hours. It burns pipeline gas or fuel oil, one fuel
+each hour, and stays on the last fuel it burned until you switch it.
+
+Gas costs $65/MWh on Friday, and you buy what you burn. On the weekend it
+costs $305.70, and the pipe is full: your transport is interruptible, so
+the pipeline schedules at most 30 MW for you. You set the weekend's gas
+now, at midnight on Friday: one flat number of megawatts, up to 30, for
+Saturday and Sunday. Each hour the plant may take up to 6 MW either side of
+it at no charge. It cannot take more, and every megawatt-hour below that
+band costs $200.
+
+Oil costs $190/MWh. The tank holds 315 barrels, three hours at full
+output. The plant injects demineralized water only when it burns oil, and
+holds 120 cubic meters, eight hours of it. A barge with 945 barrels, nine
+more hours, is due at dawn on Saturday.
+
+The forecast assumes the next hours look like this one.
+
+Stars are live. The exact optimizer set the nomination, chose a fuel for
+each hour and played all three days. The engine replayed that line to the
+penny. Full delivery of all three orders is the price of any medal.
+"""
+
+
+def s23_hhmm(i: int) -> str:
+    """A weekend turn's day and hour, counted from Saturday 00:00."""
+    t = S23_WEEKEND[0] + i
+    day = S23_DAYS[t // 24] if t < 72 else "Monday"
+    return f"{day} {t % 24:02d}:00"
+
+
+def compile_s23(rows: list[HourlyLoad]) -> dict:
+    """S-23 · The Barge (#473): S-11's three cold days on a dual-fuel plant
+    (#707). Friday's gas is bought as burned; the weekend's is one flat
+    nomination of at most 30 MW set at turn 0, all the gas there is (#635),
+    at the weekend's spike price. Fuel oil comes from a tank, with the water
+    the plant injects only on oil; the barge promised for Saturday dawn
+    arrives after Sunday's order. The MILP chooses the nomination and each
+    hour's fuel."""
+    pack = compile_s11(rows)
+    n = pack["turns"]
+    assert n == 72 and len(S23_DAYS) * 24 == n
+    gas = pack["site"]["diesel"]
+    fuel = gas["fuel_usd_per_mwh"]
+    gas["fuel_usd_per_mwh_series"] = [fuel] * 24 + [S23_WEEKEND_FUEL_USD_PER_MWH] * len(S23_WEEKEND)
+    gas["alternate_fuel"] = {"id": "oil", "label": "Fuel oil", "fuel_usd_per_mwh": S23_OIL_USD_PER_MWH}
+    pack["site"]["stocks"] = [
+        {
+            "id": "oil",
+            "label": "Fuel oil",
+            "unit": "bbl",
+            "initial": S23_OIL_INITIAL_BBL,
+            "capacity": S23_OIL_CAPACITY_BBL,
+            "burn_per_mwh_generated": S23_OIL_BBL_PER_MWH,
+            "deliveries": [{"turn": S23_BARGE_ACTUAL_TURN, "quantity": S23_BARGE_BBL}],
+            "burns_on": "oil",
+        },
+        {
+            "id": "water",
+            "label": "Demineralized water",
+            "unit": "m³",
+            "initial": S23_WATER_INITIAL_M3,
+            "capacity": S23_WATER_INITIAL_M3,
+            "burn_per_mwh_generated": S11_WATER_M3_PER_MWH,
+            "burns_on": "oil",
+        },
+    ]
+    weekend_prices = [pack["grid"]["price_usd_per_mwh"][t] for t in S23_WEEKEND]
+    pack["commitments"] = [
+        {
+            "id": "gas",
+            "kind": "nomination",
+            "label": "Weekend gas nomination",
+            "decision_turn": 0,
+            "window": list(S23_WEEKEND),
+            "max_mw": S23_NOMINATION_MAX_MW,
+            "imbalance_usd_per_mwh": NOMINATION_IMBALANCE_USD_PER_MWH,
+            "tolerance_mw": [NOMINATION_TOLERANCE_MW] * len(S23_WEEKEND),
+            "caps_gas": True,
+            "notice_md": (
+                "**Weekend gas.** Nominate Saturday's and Sunday's gas now: one flat number of "
+                f"megawatts, at most {S23_NOMINATION_MAX_MW:.0f}, from Saturday 00:00 to Sunday "
+                "23:00. It is all the gas there is on the weekend. "
+                + outlook_md(weekend_prices, s23_hhmm)
+            ),
+        }
+    ]
+    # S-11's day-2 notice is about its water truck, which this site does not have.
+    for ev in pack["events"]:
+        ev["notice_md"] = ev["notice_md"].replace(S11_TRUCK_NOTE, "")
+    pack["events"].append(
+        {
+            "turn": S23_BARGE_NOTICE_TURN,
+            "type": "notice",
+            "turns_active": [S23_BARGE_NOTICE_TURN],
+            "notice_md": (
+                "**Barge delayed.** Ice blocks the delivery dock, and the barge due at 06:00 "
+                "cannot berth until the Coast Guard clears it. The carrier names no new time."
+            ),
+        }
+    )
+    pack["events"].sort(key=lambda ev: ev["turn"])
+    pack["scenario_id"] = "S-23"
+    pack["title"] = "The Barge"
+    pack["pack_version"] = "0.1.0"
+    pack["brief_md"] = S23_BRIEF_MD
+    shared, marker, _ = pack["provenance"]["notes"].partition(" Situation from the Winter 2026")
+    assert marker, "S-11's notes changed; S-23 keeps only their shared opening"
+    pack["provenance"]["notes"] = shared + (
+        " S-23 THE BARGE (#473): S-11's three days and events, named Friday to Sunday as S-18 "
+        "names its days (the source calendar puts them on Tuesday to Thursday, and RTS-GMLC is a "
+        "synthetic year). A dual-fuel plant (#707) burns pipeline gas or fuel oil, one fuel per "
+        "turn, kept until the player switches. Gas: a fuel price series (#469), "
+        f"${fuel:.0f}/MWh on Friday and ${S23_WEEKEND_FUEL_USD_PER_MWH:.2f} on Saturday and "
+        "Sunday, S-18's Saturday figure: the report's Henry Hub average of $30.57/MMBtu on "
+        "January 26 (p. 31) at 10 MMBtu/MWh, applied here to the whole weekend. Friday's gas is "
+        "unlimited; the weekend's is one flat nomination (#464) set at turn 0 for turns "
+        f"{S23_WEEKEND[0]}-{S23_WEEKEND[-1]}, with S-15's band of {NOMINATION_TOLERANCE_MW:.0f} MW "
+        f"and imbalance of ${NOMINATION_IMBALANCE_USD_PER_MWH:.0f}/MWh, and caps_gas (#635): "
+        "weekend spot gas was illiquid (p. 22). Its maximum is "
+        f"{S23_NOMINATION_MAX_MW:.0f} MW, a teaching number for interruptible transport on a full "
+        "pipe: non-firm shippers lose priority in New England, and dual-fuel units hold no firm "
+        "gas (p. 35). Fuel oil at "
+        f"${S23_OIL_USD_PER_MWH:.0f}/MWh, a teaching number for distillate; a tank (#462) burning "
+        f"{S23_OIL_BBL_PER_MWH} bbl per MWh on oil only, {S23_OIL_INITIAL_BBL:.0f} bbl at the start "
+        "(three hours at full output); demineralized water burning "
+        f"{S11_WATER_M3_PER_MWH} m3 per MWh on oil only (NOx-control injection), "
+        f"{S23_WATER_INITIAL_M3:.0f} m3 (eight hours). The brief promises a barge of "
+        f"{S23_BARGE_BBL:.0f} bbl at Saturday 06:00 (turn {S23_BARGE_PROMISED_TURN}); ice on the "
+        "river blocked the docks until the Coast Guard cleared it (p. 18), so the pack delivers it "
+        f"at Sunday 21:00 (turn {S23_BARGE_ACTUAL_TURN}), after the third order, and a notice at "
+        f"turn {S23_BARGE_NOTICE_TURN} says it is late without naming a time. The server withholds "
+        "delivery turns from the player. PJM directed dual-fuel units back to gas to preserve fuel "
+        "oil (p. 17); the plant stays on oil until the player switches back. optimal_cost_usd "
+        "solved as an exact MILP (HiGHS via scipy) that chooses the nomination and each turn's "
+        "fuel, engine-verified by parity test."
+    )
+    return pack
+
+
 # What the exact optimizers account for (#584). Every field the pack schema
 # allows is in one of these, and tests/unit/test_pack_compiler.py fails when a
 # new one is in none, so a mechanic cannot reach the solver unread.
@@ -2891,10 +3098,14 @@ OPTIMIZER_REFUSES = {
     "site.diesel.supply_options": (
         "the enumerator does not model site.diesel.supply_options; the MILP does (#469)"
     ),
+    "site.diesel.alternate_fuel": (
+        "the enumerator does not model site.diesel.alternate_fuel; the MILP does (#707)"
+    ),
 }
 #: Of those, the fields the MILP models and the enumerator still refuses.
 MILP_ALSO_MODELS = frozenset({
     "site.stocks", "grid.import_limit_mw", "commitments", "site.diesel.supply_options",
+    "site.diesel.alternate_fuel",
 })
 OPTIMIZER_EVENT_TYPES = frozenset({
     "conservation_appeal", "curtailment_order", "absorption_appeal",
@@ -3063,6 +3274,19 @@ def compute_optimal_milp(
     options = gas.get("supply_options", [])
     off_z = nv
     nv += len(options)
+    # A second fuel (#707): each turn's output g splits into a, the alternate
+    # fuel's share, and a binary w for the fuel the turn burns, so the gas
+    # taken is g - a. Fuel-bound stocks burn a; the supply cap, a nomination
+    # and its cap read g - a. They follow the supply options' variables.
+    alt = gas.get("alternate_fuel")
+    na = n if alt else 0
+    off_a = nv
+    off_w = off_a + na
+    nv += 2 * na
+
+    def gas_taken(t: int, sign: float = 1.0) -> dict[int, float]:
+        """The turn's gas as row coefficients: g, less a on a dual-fuel plant."""
+        return {off_g + t: sign, off_a + t: -sign} if na else {off_g + t: sign}
 
     obj = np.zeros(nv)
     for t in range(n):
@@ -3071,6 +3295,8 @@ def compute_optimal_milp(
         obj[off_g + t] = fuel[t] - price[t]  # gas burns fuel instead of buying
     for j, option in enumerate(options):
         obj[off_z + j] = option["premium_usd_per_turn"] * n
+    for t in range(na):  # the alternate fuel's output is priced at its own price
+        obj[off_a + t] = alt["fuel_usd_per_mwh"] - fuel[t]
     for t in credited:
         obj[off_r + ridx[t]] = -credit[t]
     for t in range(k):
@@ -3108,6 +3334,10 @@ def compute_optimal_milp(
     # hour on every turn it runs at all: u buys the hour, g is what it makes.
     for t in range(n):  # g <= G*u
         row({off_g + t: 1.0, off_u + t: -G}, -np.inf, 0)
+    for t in range(na):  # one fuel a turn (#707): a <= G*w, g - a <= G*(1 - w), a <= g
+        row({off_a + t: 1.0, off_w + t: -G}, -np.inf, 0)
+        row({off_g + t: 1.0, off_a + t: -1.0, off_w + t: G}, -np.inf, G)
+        row({off_a + t: 1.0, off_g + t: -1.0}, -np.inf, 0)
 
     def relief(t: int) -> dict[int, float]:
         """The turn's relief as row coefficients: d + g - c, plus s under a limit."""
@@ -3138,28 +3368,31 @@ def compute_optimal_milp(
         burn = stock["burn_per_mwh_generated"]
         arriving = {dl["turn"]: dl["quantity"] for dl in stock.get("deliveries", [])}
         base = off_lvl + j * n
+        # A stock bound to the alternate fuel (#707) burns only its share a.
+        drawn = off_a if "burns_on" in stock else off_g
         for t in range(n):
             # A delivery lands before the turn's burn and is capped at capacity,
             # as applyStockDeliveries caps it: level(t) + burn*g(t) is at most
             # level(t-1) + delivery(t), and at most capacity. A level may sit
             # below the engine's, since unburnt fuel is never worth discarding,
             # so the engine always holds at least the fuel the plan burns.
-            coeffs = {base + t: 1.0, off_g + t: burn}
+            coeffs = {base + t: 1.0, drawn + t: burn}
             if t > 0:
                 coeffs[base + t - 1] = -1.0
             carried = stock["initial"] if t == 0 else 0.0
             row(coeffs, -np.inf, carried + arriving.get(t, 0.0))
             if t in arriving:
-                row({base + t: 1.0, off_g + t: burn}, -np.inf, stock["capacity"])
+                row({base + t: 1.0, drawn + t: burn}, -np.inf, stock["capacity"])
     for cmt, q_idx, aux in cm_layout:  # commitment settlement (#464)
         for _, t, a in aux:
             if cmt["kind"] == "nomination":
                 # A flow order in force replaces the term's tolerance (#635).
+                # On a dual-fuel plant g here is the gas taken, g - a (#707).
                 tol = tolerance_at(pack, cmt, t)
-                row({a: 1.0, off_g + t: -1.0, q_idx: 1.0}, -tol, np.inf)  # dev >= g - q - tol
-                row({a: 1.0, off_g + t: 1.0, q_idx: -1.0}, -tol, np.inf)  # dev >= q - g - tol
+                row({a: 1.0, q_idx: 1.0, **gas_taken(t, -1.0)}, -tol, np.inf)  # dev >= g - q - tol
+                row({a: 1.0, q_idx: -1.0, **gas_taken(t)}, -tol, np.inf)  # dev >= q - g - tol
                 if cmt.get("caps_gas"):  # no gas to buy above the band (#635): g <= q + tol
-                    row({off_g + t: 1.0, q_idx: -1.0}, -np.inf, tol)
+                    row({q_idx: -1.0, **gas_taken(t)}, -np.inf, tol)
             else:
                 coeffs = dict(relief(t))  # short >= q - relief
                 coeffs[a] = 1.0
@@ -3168,7 +3401,7 @@ def compute_optimal_milp(
     if options:  # fuel supply (#469): one option, and gas within what it delivers
         row({off_z + j: 1.0 for j in range(len(options))}, 1.0, 1.0)
         for t in range(n):
-            coeffs = {off_g + t: 1.0}
+            coeffs = gas_taken(t)
             for j, option in enumerate(options):
                 coeffs[off_z + j] = -option["available_mw"][t]
             row(coeffs, -np.inf, 0.0)
@@ -3189,6 +3422,8 @@ def compute_optimal_milp(
         np.concatenate([np.full(n, s["capacity"]) for s in stocks]) if stocks else np.zeros(0),
         np.array(cm_hi, dtype=float),          # each commitment's q, then its settlement
         np.ones(len(options)),                 # z binary, one per supply option
+        np.full(na, G),                        # a, the alternate fuel's output (#707)
+        np.ones(na),                           # w binary, the fuel each turn burns
     ])
     pinned = dict(commit or {})
     for cmt, q_idx, _ in cm_layout:
@@ -3203,7 +3438,7 @@ def compute_optimal_milp(
         bounds_lo[off_z + ids.index(supply)] = 1.0
     integrality = np.concatenate([
         np.zeros(2 * n + m), np.ones(n), np.ones(m), np.zeros(n + k + n * len(stocks)),
-        np.zeros(len(cm_hi)), np.ones(len(options)),
+        np.zeros(len(cm_hi)), np.ones(len(options)), np.zeros(na), np.ones(na),
     ])
 
     res = milp(
@@ -3217,7 +3452,10 @@ def compute_optimal_milp(
     # Under a supply option the gas a turn can reach is what the option
     # delivers, so the snap to full output snaps to that (#469).
     chosen = max(options, key=lambda o: x[off_z + options.index(o)]) if options else None
-    reach = [min(G, chosen["available_mw"][t]) if chosen else G for t in range(n)]
+    # A turn whose output is the alternate fuel's (#707) takes no gas, so no
+    # supply option or nomination bounds what it can reach.
+    on_alt = [t < na and x[off_w + t] > 0.5 and x[off_a + t] > 1e-6 for t in range(n)]
+    reach = [min(G, chosen["available_mw"][t]) if chosen and not on_alt[t] else G for t in range(n)]
     gas_mw = [_plan_mw(x[off_g + t], reach[t]) for t in range(n)]
     gas_hours = [t for t in range(n) if gas_mw[t] > 0]
     reducing = [t for t in credited if x[off_y + ridx[t]] > 0.5 and x[off_r + ridx[t]] > 1e-6]
@@ -3225,7 +3463,7 @@ def compute_optimal_milp(
     # SLA, so the line keeps nine places there; every catalogue plan was
     # written with four. A commitment prices relief and gas against q to the
     # MWh, so it keeps nine places too (#464), and so does a supply cap (#469).
-    digits = 9 if k or commitments or options else 4
+    digits = 9 if k or commitments or options or alt else 4
     plan = {
         "cost": round(const + float(res.fun), 2),
         "gas_hours": gas_hours,
@@ -3242,11 +3480,15 @@ def compute_optimal_milp(
         for cmt in commitments:
             if cmt.get("caps_gas"):
                 for t in cmt["window"]:
+                    if on_alt[t]:  # no gas taken, so the cap does not apply (#707)
+                        continue
                     cap = plan["commit"][cmt["id"]] + tolerance_at(pack, cmt, t)
                     assert gas_mw[t] <= cap + 1e-6, f"gas {gas_mw[t]} above the {cmt['id']} cap {cap}"
                     gas_mw[t] = min(gas_mw[t], cap)
     if chosen:
         plan["supply"] = chosen["id"]
+    if alt:  # the fuel each turn burns (#707); an idle turn is written as gas
+        plan["fuel"] = [alt["id"] if on_alt[t] else "gas" for t in range(n)]
     if k:
         # Shed the engine imposes by itself, on import above the limit, stays
         # out of the line. Shed beyond that a plan reaches only by curtailing,
@@ -3708,6 +3950,11 @@ def optimal_line(pack: dict, plan: dict) -> list[dict]:
     # The chosen fuel supply goes on turn 0, the only turn it is read (#469).
     if "supply_options" in pack["site"]["diesel"]:
         line[0]["supply"] = plan["supply"]
+    # On a dual-fuel plant every turn names its fuel (#707), as the engine's
+    # applied action does, so the line does not lean on what a turn inherits.
+    if "alternate_fuel" in pack["site"]["diesel"]:
+        for t, action in enumerate(line):
+            action["fuel"] = plan["fuel"][t]
     return line
 
 
@@ -3818,14 +4065,18 @@ def main(argv: list[str] | None = None) -> int:
     # models (#464, #469, #635, #465); it chooses each quantity and the supply.
     s15, s16, s17 = compile_s15(rows), compile_s16(rows), compile_s17(rows)
     s18, s19, s20 = compile_s18(rows), compile_s19(rows), compile_s20(rows)
+    # S-23 The Barge (#473): S-11's days on a dual-fuel plant (#707) with a
+    # weekend nomination, which only the MILP models.
+    s23 = compile_s23(rows)
     commitment_plans = {}
-    for p in (s15, s16, s17, s18, s19, s20):
+    for p in (s15, s16, s17, s18, s19, s20, s23):
         cplan = compute_optimal_milp(p)
         p["scoring"]["optimal_cost_usd"] = cplan["cost"]
         commitment_plans[p["scenario_id"]] = cplan
         print(
             f"  {p['scenario_id']} MILP optimum ${cplan['cost']:,.2f} | commit {cplan.get('commit')} "
             f"| supply {cplan.get('supply')} | gas {cplan['gas_hours']} | reducing {cplan['reducing']}"
+            + (f" | fuel {cplan['fuel']}" if "fuel" in cplan else "")
         )
     # S-14 The Wind Came Through (#482) prices net load, so it may not play a
     # day the load-priced packs play. Its absorption appeal needs the
@@ -3836,7 +4087,7 @@ def main(argv: list[str] | None = None) -> int:
     # S-22 The Same Afternoon (#697) is S-21 with the outage silent; inert too.
     s22 = compile_s22(rows)
     taken: set[tuple[int, int, int]] = set()
-    for other in (s10, s07, s11, s12, s13, s15, s16, s17, s18, s19, s20, s21, s22):
+    for other in (s10, s07, s11, s12, s13, s15, s16, s17, s18, s19, s20, s21, s22, s23):
         taken |= played_days(other)
     s14 = compile_s14(rows, wind_rows, frozenset(taken))
     # S-08 The Peninsula (#137): the first pack built on OBSERVED data rather
@@ -3867,6 +4118,7 @@ def main(argv: list[str] | None = None) -> int:
         (s20, args.out.parent / "s-20.pack.json"),
         (s21, args.out.parent / "s-21.pack.json"),
         (s22, args.out.parent / "s-22.pack.json"),
+        (s23, args.out.parent / "s-23.pack.json"),
     )
     # The binding difficulty ordering (#126), stamped as data so the play
     # page can render the catalogue as the ladder it is.
@@ -3921,10 +4173,15 @@ def main(argv: list[str] | None = None) -> int:
     # S-22 (#697) sits directly above S-21 and below S-09: S-21's day and
     # outage with nothing on the screen saying the price is old, where S-21
     # marks it. S-09's forecast is blind to the cliff on a screen that is live.
+    #
+    # S-23 (#473) is the Tier 2 version of S-11's situation and sits above it,
+    # at the top: S-11's three days with two fuels, two stocks, a weekend
+    # nomination to keep and a barge that slips.
     ranks = {
         "S-00": 0, "S-08": 1, "S-03": 2, "S-20": 3, "S-21": 4, "S-22": 5,
         "S-09": 6, "S-15": 7, "S-14": 8, "S-12": 9, "S-16": 10, "S-10": 11,
         "S-19": 12, "S-13": 13, "S-07": 14, "S-18": 15, "S-17": 16, "S-11": 17,
+        "S-23": 18,
     }
     for pack, _ in packs:
         pack["difficulty_rank"] = ranks[pack["scenario_id"]]
