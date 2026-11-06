@@ -1,11 +1,12 @@
 // Deployment configuration for the Palaestra worker, published for inspection.
 //
-// This file enumerates every external resource the running service can reach.
-// A Cloudflare Worker can only touch what its bindings and code allow, so this
-// is the complete surface, not a summary of it.
+// This file lists every binding the running service has. A Cloudflare Worker
+// can reach only its bindings and the hosts its code fetches, and SECURITY.md
+// names every one of those hosts.
 //
-// Two values are redacted, and both redactions are marked. Nothing else is
-// changed from the deployed file.
+// Three values are redacted, and each redaction is marked. The comments are
+// written for this copy; every binding, setting and other value is the deployed
+// file's.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "palaestra",
@@ -45,16 +46,35 @@
   // Operator-only mail. destination_address is a hard restriction rather than
   // a default: this binding physically cannot deliver to a player, so no bug
   // in notification code can turn an internal alert into mail to a stranger.
+  // Mail to a player travels through AWS's email service over HTTPS instead,
+  // never through this binding.
   "send_email": [
     {
       "name": "OPERATOR_MAIL",
       "destination_address": "<REDACTED: operator's personal address>"
     }
   ],
+  // The public support form's limit: 60 reports per minute for each reporter,
+  // counted by account when signed in and by network address when not. It
+  // stops a script, not a classroom.
+  "ratelimits": [
+    {
+      "name": "SUPPORT_RATE_LIMITER",
+      "namespace_id": "6851",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
   "vars": {
     // Public by construction. This identifier travels in the address bar of
     // every sign-in, so publishing it discloses nothing.
     "LINKEDIN_CLIENT_ID": "8624snv1vkl69m",
+    // GitHub's identifier, public in the same way. While it or
+    // GITHUB_CLIENT_SECRET is empty, GitHub sign-in is off: the sign-in page
+    // offers no GitHub button and the GitHub routes refuse.
+    "GITHUB_CLIENT_ID": "",
     "OPERATOR_EMAIL": "<REDACTED: operator's personal address>",
     // Admin allowlist, comma-separated player ids. Deliberately configuration
     // rather than a database column: administrative access cannot be granted
@@ -63,8 +83,13 @@
     // Redacted because it names an account worth attacking. It is not itself a
     // credential: using it would require signing in as that person through
     // LinkedIn.
-    "ADMIN_PLAYER_IDS": "<REDACTED: one player id>"
+    "ADMIN_PLAYER_IDS": "<REDACTED: one player id>",
+    // The only sender address mail to players may carry. AWS's email service
+    // refuses any other.
+    "PLAYER_MAIL_FROM": "support@palaestra.thrivetech.ai"
   }
   // Secrets are set through the deployment platform and appear in no file in
-  // either repository: SESSION_SECRET, LINKEDIN_CLIENT_SECRET.
+  // either repository: SESSION_SECRET, LINKEDIN_CLIENT_SECRET,
+  // GITHUB_CLIENT_SECRET, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY. A path
+  // whose secret is not set is off.
 }

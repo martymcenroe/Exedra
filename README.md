@@ -27,6 +27,8 @@ scenario of your own and submit it.
 
 | Page | What it answers |
 |---|---|
+| [Quickstart](QUICKSTART.md) | From a clone to a verdict on a pack you changed yourself |
+| [The kit](kit/README.md) | How to build a scenario with a coding agent |
 | [Goals](https://github.com/martymcenroe/Exedra/wiki/Goals) | Why this exists and who it is for |
 | [The Venue](https://github.com/martymcenroe/Exedra/wiki/The-Venue) | What Palaestra is, and the thesis underneath it |
 | [Where This Is Going](https://github.com/martymcenroe/Exedra/wiki/Where-This-Is-Going) | Committed work, possibilities, and four inventions offered for argument |
@@ -38,11 +40,13 @@ scenario of your own and submit it.
 | [What Exedra Withholds](https://github.com/martymcenroe/Exedra/wiki/What-Exedra-Withholds) | What is deliberately not here, and why |
 | [Hydration](https://github.com/martymcenroe/Exedra/wiki/Hydration) | How this repository is generated |
 
-## What you will be able to do here
+## What you can do here
 
 Clone it. Compile a scenario from public grid data. Play it against the same
 engine the venue runs. Check it against the same acceptance gate the venue
 uses. Open a pull request.
+
+The [quickstart](QUICKSTART.md) takes you from a clone to your first verdict.
 
 You need a text editor and public data. You do not need an account, a database,
 a cloud provider, or a key.
@@ -53,18 +57,17 @@ reliability testbed.
 
 ## Status
 
-**The wiki is ahead of this repository.** Those pages describe Exedra as
-designed. The code arrives by export from the platform, and this table says what
-is actually in the tree today.
+The wiki describes Exedra as designed. The code arrives by export from the
+platform, and this table says what is actually in the tree today.
 
 | Part | State |
 |---|---|
 | Goals and architecture, on the wiki | Written |
-| Engine, scoring, schema | Not yet exported |
-| Acceptance gate and optimizer | Not yet exported |
-| First Shift and Curtailment Order | Not yet exported |
-| Local runner | Not yet built |
-| Contribution tutorials and prompts | Not yet written |
+| Engine, scoring, schema | Exported |
+| Acceptance gate and optimizer | Exported |
+| First Shift and Curtailment Order | Exported |
+| Local runner | In the tree, at `web/runner/play.ts` |
+| Quickstart and contribution kit | In the tree, at `QUICKSTART.md` and `kit/` |
 
 If you arrived early and want to help, the wiki is the specification. Read
 [Goals](https://github.com/martymcenroe/Exedra/wiki/Goals) first.
@@ -73,14 +76,18 @@ If you arrived early and want to help, the wiki is the specification. Read
 
 If you are deciding whether `palaestra.thrivetech.ai` is safe to allow or sign
 in to, read [SECURITY.md](SECURITY.md). It states which hosts the software
-contacts, what runs in the browser, what is collected, and what is refused, and
-it links to copies of the running code in [`inspect/`](inspect/) so every claim
+contacts, what runs in the browser, what is collected, and what is refused. It
+links to copies of the running code in [`inspect/`](inspect/), so every claim
 can be checked.
 
-The short version: the browser contacts no external host at all, and the server
-contacts LinkedIn and nothing else.
+The short version: apart from the sign-in provider's own page, the browser
+contacts no external host. The server contacts the sign-in provider the player
+chose: `www.linkedin.com` and `api.linkedin.com`, or `github.com` and
+`api.github.com` once GitHub sign-in is switched on. It also contacts AWS's
+email service, `email.us-east-1.amazonaws.com`, to send mail a player asked
+for, once player mail is switched on. It contacts nothing else.
 
-## Licence
+## License
 
 PolyForm Noncommercial 1.0.0. See [LICENSE](LICENSE).
 

@@ -1,31 +1,80 @@
-# CLAUDE.md - Exedra Project
+# CLAUDE.md - Exedra
 
-You are a team member on the Exedra project, not a tool.
+You are working in Exedra, the public workshop for [Palaestra](https://palaestra.thrivetech.ai)
+scenarios. A scenario is a JSON file, a scenario pack, that the Palaestra venue loads. A player
+runs a data center at the grid interface for the pack's day and is scored against a certified
+optimal line. Your job here is almost always to help someone build a pack, test it and submit it.
 
-## Project Identifiers
+## Project identifiers
 
 - **Repository:** `martymcenroe/Exedra`
-- **Worktree Pattern:** `Exedra-{IssueID}` (e.g., `Exedra-45`)
+- **The wiki is the specification:** https://github.com/martymcenroe/Exedra/wiki. Clone it beside
+  this repository with `git clone https://github.com/martymcenroe/Exedra.wiki.git` when you need to
+  read it offline.
 
-This is a public repository that people fork. Paths are repo-relative, and
-nothing here should assume a particular machine.
+This is a public repository that people fork. Paths are repo-relative, and nothing here should
+assume a particular machine.
 
-## Project-Specific Context
+## Generated files: never edit them
 
-_TODO: Add tech stack, architecture, file map, project-type-specific notes,
-and any workflow overrides specific to this project. The universal
-CLAUDE.md (auto-loaded by Claude Code's parent-directory traversal) covers
-fleet-wide rules -- this file only adds what's true for THIS repo
-specifically. Restating universal content here creates drift on every
-universal-CLAUDE.md edit (ADR 0219)._
+Every path listed in `GENERATED.json` is generated from the platform by its export tool. The set
+holds the engine, the scoring function, the schemas, the shipped packs and their certified plans,
+the worked example, and the reading copies of the running code in `inspect/`.
 
-## Data Directories
+The acceptance gate, the optimizer and the parity suite are generated too.
 
-- `data/`: ephemeral session artifacts (transcripts, run logs, pickup state). Ignored by the fleet-wide global gitignore; not committed.
-- `data-g/`: source-of-truth data the runtime treats as authoritative (rosters, corpora, configs). Git-tracked for durability. See `data-g/README.md`. (AssemblyZero #1563.)
+`tests/test_generated_files.py` fails on any byte that differs from its export. A change to one
+of these files, however correct, is the drift this arrangement exists to prevent: a pack would
+pass here and score differently at the venue. When the engine or the gate looks wrong, write a
+pack that shows it and open an issue. Never edit a generated file to make a pack pass.
 
-## Workflow Overrides
+Everything else is ordinary and may be edited: contributed packs, `QUICKSTART.md`, `kit/`,
+`web/runner/` and the documentation.
 
-_None yet. If this project needs to override any universal CLAUDE.md
-rule (e.g., a custom merge tool, a special test convention), document
-the override here with explicit language ("override") per ADR 0219._
+## Commands
+
+From the repository root:
+
+```
+poetry install
+npm ci --prefix web
+poetry run python tools/verify_pack.py path/to/your.pack.json
+poetry run python tools/verify_pack.py path/to/your.pack.json --certified-out your.certified.pack.json --plan-out your.plan.json
+node web/runner/play.ts your.certified.pack.json --actions your.plan.json
+node web/runner/play.ts path/to/your.pack.json
+poetry run pytest
+```
+
+The third line is the acceptance gate, and its verdict is the venue's verdict. It exits 1 on a
+rejection, and exits 2 with `GATE NOT RUN` when its own toolchain is missing, which is no verdict
+on the pack. The fourth also writes the pack with the gate's certified optimum, the file the venue
+would load, and on `accept-with-stars` the certified line as a plan. The fifth plays that line.
+`poetry run pytest` runs the drift test.
+
+Node.js 22.18 or later runs `web/runner/play.ts` directly, with nothing installed. Each turn takes
+one line: curtailment MW, battery MW and gas MW, with `accept` added to take an appeal that is open,
+as `0 64 0 accept`. A positive battery figure discharges and a negative one charges.
+
+## Rules for a pack
+
+- Contributed packs take the ids `C-001` to `C-999`. Never use an `S-` id: those are the
+  venue's catalog.
+- Every number comes from a public source whose license permits redistribution, or is declared
+  hand-authored and dedicated CC0. The pack's `provenance` names the authors with their
+  affiliations, the cohort, the source, its URL and its license. Never invent a source or a
+  license.
+- A submitted `optimal_cost_usd` is discarded and recomputed by the gate. Report the gate's figure
+  and the difference from the claim. Never change the claim to hide the difference.
+- Hourly turns (`step_minutes: 60`) are the ones the exact optimizer can certify. A day the gate
+  cannot certify is published without stars.
+
+## What a good scenario is
+
+Read `kit/worth-accepting.md` before you design one. A pack that passes every check can still be a
+dull day. A good one probes an obligation two operators would read differently, or a rule with a
+perverse outcome.
+
+## Data directories
+
+- `data/`: ephemeral working files. Ignored by git, never committed.
+- `data-g/`: the shipped packs and plans. Generated, so never edited here.

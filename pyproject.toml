@@ -1,14 +1,16 @@
 [project]
 name = "exedra"
 version = "0.1.0"
-description = ""
+description = "The public workshop for Palaestra scenarios: build a day at the grid interface, play it, verify it, submit it."
 authors = [
     {name = "Marty McEnroe",email = "cto@thrivetech.ai"}
 ]
 license = {text = "PolyForm-Noncommercial-1.0.0"}
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.12,<4.0"
 dependencies = [
+    "jsonschema (>=4.26.0,<5.0.0)",
+    "scipy (>=1.18.0,<2.0.0)"
 ]
 
 
@@ -30,4 +32,6 @@ python_functions = ["test_*"]
 addopts = "-ra --strict-markers"
 
 [tool.poetry]
-package-mode = false
+# The acceptance gate (tools/verify_pack.py) imports the palaestra package,
+# which the export writes to src/palaestra/.
+packages = [{include = "palaestra", from = "src"}]
