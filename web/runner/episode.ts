@@ -162,7 +162,8 @@ function finiteNumber(field: string, name: string): number {
 }
 
 /** A commitment named on a line of text (#464): its id, `=`, and the MW.
- * The id `supply` names the fuel supply instead (#469). */
+ * The id `supply` names the fuel supply instead (#469), and `fuel` the fuel
+ * a dual-fuel plant burns (#707). */
 const COMMIT_WORD = /^([a-z][a-z0-9_]*)=(.*)$/;
 const SUPPLY_ID = /^[a-z][a-z0-9_]*$/;
 
@@ -170,10 +171,10 @@ const SUPPLY_ID = /^[a-z][a-z0-9_]*$/;
  * One turn's action from a line of text: curtailment MW, battery MW (positive
  * discharges, negative charges) and gas MW, separated by spaces or commas.
  * After them may come one word, `accept` or `decline`, answering an open
- * offer, any commitments named as `id=MW`, such as `gas=54`, and on turn 0
- * the fuel supply as `supply=id`, such as `supply=firm`. Leaving the answer
- * out sends none, which the engine treats as a decline, exactly as the venue
- * does.
+ * offer, any commitments named as `id=MW`, such as `gas=54`, on turn 0 the
+ * fuel supply as `supply=id`, such as `supply=firm`, and on a dual-fuel plant
+ * the fuel as `fuel=id`, such as `fuel=oil`. Leaving the answer out sends
+ * none, which the engine treats as a decline, exactly as the venue does.
  */
 export function parseActionLine(line: string): Action {
   const fields = line.trim().split(/[\s,]+/).filter((f) => f !== "");
@@ -193,6 +194,12 @@ export function parseActionLine(line: string): Action {
       if (action.supply !== undefined) throw new RunnerError("the supply is named twice");
       if (!SUPPLY_ID.test(named[2]!)) throw new RunnerError(`"${named[2]}" is not a supply option's id`);
       action.supply = named[2]!;
+      continue;
+    }
+    if (named && named[1] === "fuel") {
+      if (action.fuel !== undefined) throw new RunnerError("the fuel is named twice");
+      if (!SUPPLY_ID.test(named[2]!)) throw new RunnerError(`"${named[2]}" is not a fuel's id`);
+      action.fuel = named[2]!;
       continue;
     }
     if (named) {
@@ -215,11 +222,11 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 /** An action object from JSON, held to the venue's own check: three numbers,
  * accept_offer a boolean when present, commit, when present, a number of MW
- * for each commitment it names (#464), and supply, when present, a string
- * (#469). */
+ * for each commitment it names (#464), and supply and fuel, when present,
+ * strings (#469, #707). */
 function actionFromJson(value: unknown, where: string): Action {
   if (!isRecord(value)) throw new RunnerError(`${where} is not an action object`);
-  const { curtail_mw, battery_mw, diesel_mw, accept_offer, commit, supply } = value;
+  const { curtail_mw, battery_mw, diesel_mw, accept_offer, commit, supply, fuel } = value;
   for (const [name, v] of [
     ["curtail_mw", curtail_mw],
     ["battery_mw", battery_mw],
@@ -248,6 +255,10 @@ function actionFromJson(value: unknown, where: string): Action {
   if (supply !== undefined) {
     if (typeof supply !== "string") throw new RunnerError(`${where}: supply must be a supply option's id`);
     action.supply = supply;
+  }
+  if (fuel !== undefined) {
+    if (typeof fuel !== "string") throw new RunnerError(`${where}: fuel must be a fuel's id`);
+    action.fuel = fuel;
   }
   return action;
 }

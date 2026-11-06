@@ -279,6 +279,12 @@ function describeObservation(pack: ScenarioPack, obs: Observation): string {
     const ahead = obs.forecast.map((f) => usd(f.fuel_usd_per_mwh ?? 0));
     lines.push(`  fuel   ${usd(obs.site.fuel_usd_per_mwh)}/MWh now${ahead.length > 0 ? `, then ${ahead.join(" · ")}` : ""}`);
   }
+  // A dual-fuel plant (#707): the fuel it is on, and how to switch.
+  const alt = pack.site.diesel.alternate_fuel;
+  if (alt && obs.site.fuel !== undefined) {
+    const on = obs.site.fuel === alt.id ? `${alt.label}, ${usd(alt.fuel_usd_per_mwh)}/MWh` : "natural gas";
+    lines.push(`  burns  ${on} (switch with fuel=${alt.id} or fuel=gas; it stays on the last one named)`);
+  }
   const options = pack.site.diesel.supply_options;
   if (options) lines.push(describeSupply(pack, options, obs));
   for (const c of pack.commitments ?? []) lines.push(describeCommitment(pack, c, obs));
@@ -300,8 +306,9 @@ function describeResolution(r: Resolution): string {
     a.battery_mw > 0 ? `discharge ${num(a.battery_mw)}` : a.battery_mw < 0 ? `charge ${num(-a.battery_mw)}` : "idle";
   const committed = Object.entries(a.commit ?? {}).map(([id, mw]) => ` · committed ${id} ${num(mw)} MW`);
   const supplied = a.supply !== undefined ? ` · supply ${a.supply}` : "";
+  const fueled = a.fuel !== undefined ? ` · on ${a.fuel}` : "";
   const lines = [
-    `  played curtail ${num(a.curtail_mw)} MW · battery ${battery}${a.battery_mw === 0 ? "" : " MW"} · gas ${num(a.diesel_mw)} MW${a.accept_offer ? " · offer accepted" : ""}${committed.join("")}${supplied}`,
+    `  played curtail ${num(a.curtail_mw)} MW · battery ${battery}${a.battery_mw === 0 ? "" : " MW"} · gas ${num(a.diesel_mw)} MW${a.accept_offer ? " · offer accepted" : ""}${committed.join("")}${supplied}${fueled}`,
   ];
   for (const note of r.clamp_notes) lines.push(`  clamp  ${note}`);
   // A positive settlement is a charge and a negative one a payment, already in the turn cost.
