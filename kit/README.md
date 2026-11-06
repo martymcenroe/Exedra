@@ -30,16 +30,20 @@ git clone https://github.com/martymcenroe/Exedra.wiki.git
 Then add these wiki pages to the bundle: `The-Engine.md`, `The-Scenario-Pack.md` and
 `Scoring-and-Stars.md`.
 
-## The two prompts
+## The prompts
 
-The two jobs differ, so each has its own prompt.
+The jobs differ, so each has its own prompt.
 
+- [Design a scenario, one question at a time](prompt-design-interview.md): start here when you have
+  an event in mind but not yet a design. The LLM interviews you on the design, says plainly what the
+  engine can and cannot express, and builds the pack once you agree.
 - [Compile a day from public data](prompt-compile-a-day.md): the agent takes a real day from a
   public source, with a license that permits redistribution, and derives a pack from it.
 - [Author a plausible day by hand](prompt-author-a-day.md): the agent writes the numbers itself
   around one tension you name, and the pack is dedicated CC0.
 
-Paste the prompt into the agent's session after the bundle, and fill in the bracketed parts.
+Paste the prompt into the agent's session after the bundle. The two build prompts have bracketed
+parts to fill in first; the design prompt asks for what it needs.
 
 ## What the agent should hand back
 
