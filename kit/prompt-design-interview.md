@@ -117,8 +117,8 @@ The screen shows, each hour:
 - The player accepts an open appeal to collect its credit.
 - The player names a commitment's MW on its decision turn, and chooses a fuel supply option on the
   first turn.
-- On a generator with a second fuel, the player names the fuel it burns. It burns one fuel each
-  hour and stays on the last one named.
+- The player chooses the fuel for a generator with a second fuel. The generator burns one fuel
+  each hour and keeps the player's last choice.
 
 The battery and the generator serve only the site's own load, and neither exports anything to the
 grid.
@@ -135,8 +135,8 @@ grid.
 - `site.stocks` holds consumables the generator burns per MWh, such as water or fuel on hand, with
   deliveries on given turns, and the generator stops when any stock reaches zero.
 - `site.diesel.alternate_fuel` gives the generator a second fuel at its own price, such as fuel
-  oil. In an hour on that fuel the generator takes no gas, so supply options and nominations count
-  none. A stock marked `burns_on` with that fuel's id burns only in those hours.
+  oil. The generator takes no gas in an hour on that fuel, so supply options and nominations count
+  none. The generator draws down a stock tagged with that fuel in `burns_on` only in those hours.
 
 ### The grid
 
