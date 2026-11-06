@@ -1,0 +1,33 @@
+{
+  "_comment": "Known data sources for the #217 licence check. ONE source of truth, read by tools/verify_pack.py and documented in docs/contributing/0002-data-licensing.md. `match` tokens are matched case-insensitively against a pack's provenance.source_url and provenance.source_license. `standing` is what the gate reports; the named human key still signs every acceptance.",
+  "sources": [
+    {
+      "name": "NREL RTS-GMLC",
+      "match": ["rts-gmlc", "gridmod"],
+      "standing": "permissive with attribution",
+      "conditions": "NREL Data Use Disclaimer Agreement: use, copy, distribute for any purpose; keep the notice with copies; credit DOE/NREL/ALLIANCE in publications; no endorsement use of their names.",
+      "verified": "2026-08-04, github.com/GridMod/RTS-GMLC"
+    },
+    {
+      "name": "ENTSO-E Transparency Platform",
+      "match": ["entsoe.eu", "entso-e"],
+      "standing": "listed data reusable, attribution required",
+      "conditions": "ENTSO-E publishes the list of data open for free re-use (CC-BY 4.0 for listed data). The SPECIFIC series must appear on that list; attribute ENTSO-E and the primary data owner.",
+      "verified": "2026-08-04, transparency platform terms and reuse list"
+    },
+    {
+      "name": "ERCOT public website data",
+      "match": ["ercot.com"],
+      "standing": "unmodified redistribution only; ship derived aggregates",
+      "conditions": "ERCOT terms permit use, reproduction and redistribution of public website contents UNMODIFIED with notices retained. A compiled pack's series are modifications, so an ERCOT pack must ship derived values with the source cited, never restated raw series.",
+      "verified": "2026-08-04, ercot.com/help/terms"
+    },
+    {
+      "name": "hand-authored",
+      "match": ["cc0", "hand-authored", "author-created"],
+      "standing": "permissive",
+      "conditions": "Author-created numbers with no external dataset; CC0 or equivalent dedication stated in provenance.",
+      "verified": "n/a"
+    }
+  ]
+}

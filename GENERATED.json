@@ -1,0 +1,26 @@
+{
+  "files": {
+    "data-g/licensing/known-sources.json": "50d1d55ea92589d10e6570d757ee0432d6b95b4ebdaaf4542314185c8d890ccf",
+    "data-g/packs/s-00.pack.json": "814c4ec7a9df496c5e48488fb38256302884f9d86b814ba0b82f27122691472a",
+    "data-g/packs/s-03.pack.json": "268e674ad43c391fd502eff54fc313c7a82eada92181eb1c9e12de91cc669e45",
+    "data-g/plans/s-00.plan.json": "e9e80a6138dc33e2d6b1ac91f2d629912aa20e5740112468116e1dddd840924f",
+    "data-g/plans/s-03.plan.json": "e7c850e8aed45126613dec4eff683425b3cff29883350a7256264d41ef228dac",
+    "docs/contributing/example/c-001.pack.json": "5091e2771f0c4d9b0b9ad6b633a521b7b70181e8362a111c749f2e01c1cf3494",
+    "inspect/web/connection-check.tsx": "0c538ed8e92da550899eccdbbc993cdc087c8e9997cf4ef6f5361b76feb793bc",
+    "inspect/web/privacy-policy.tsx": "9cfa7d177a337b02a2e400ab070b167ed27b3a562b67ade73b358ef968e13965",
+    "inspect/worker/auth.ts": "7f925f9de561a38f55c5dcd810d95b05075d6fed82c700e63573c31db25e2b0e",
+    "inspect/worker/session.ts": "3fdc79dcb5faf2de7cb673d65912b1d675ae7997e450c8ecfbf6fa2ad04c1fa8",
+    "inspect/worker/support.ts": "85427e4267bcd1164f50a61084807aeabc7c86a213051c11123fa059a540dcee",
+    "schema/episode.v0.schema.json": "1c33aba56d4f3a213a99e8108aa9c2f54d601ef9d1efc745b5749571290d692d",
+    "schema/scenario-pack.v0.schema.json": "3996b20265d6de1a19f362029339de8f88a71d2f31af0446073d134ca8784e5a",
+    "src/palaestra/__init__.py": "ef06a98cb195732de685256ba255e23a2f6af888d9d8675f61c24182f2fedd4e",
+    "src/palaestra/compiler.py": "535db46e3f717aa649d924619085719f5d7e396113fb84ee8963e8a773f107dc",
+    "tests/test_generated_files.py": "bc27a8c062067f677aec84778cf5731e919c59b7c0c2f4cc0a61e773c328651d",
+    "tools/verify_pack.py": "f454e36041736900b74c8e8f827fe010824eddb2b7f46ecfa626ca159c03c50a",
+    "web/shared/engine.ts": "8efa3f27e5f18a8ca2ba9d66141124657fc60d08594c115804662461e2552393",
+    "web/shared/pack.ts": "f0cc1fedd9ec4d24a81ff1ed52a203c196769cb10044cc322da177a7411b2a9b",
+    "web/shared/scoring.ts": "4b81d3e63da1c1a9f47b199d9f388c42a8ba8904816200d996ca7de676d3d6d8",
+    "web/tests/baseline.test.ts": "2bf4cba029452c1733a9d6745664fbeef2f57850140458cae06c85c5b03ddac8",
+    "web/tests/optimal.test.ts": "0909ab6f3d76a32e672487452600433b1ff4b2380ecea8ad6712619a463739ef"
+  }
+}

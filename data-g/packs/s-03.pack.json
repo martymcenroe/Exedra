@@ -1,0 +1,133 @@
+{
+  "brief_md": "## S-03 \u00b7 Curtailment Order\n\nYou operate a **300 MW-class data-center campus** on a scarcity afternoon.\nThe system operator will ask for help, first politely, then not.\n\n**Your assets:** the campus IT load itself (shedding it costs SLA money),\na 100 MW / 400 MWh battery, and a 60 MW natural-gas plant with **4 permitted\nrun-hours** remaining this month.\n\n**You are scored on exactly two numbers, in tension:**\n\n1. **Operating cost.** Energy purchases, fuel, SLA penalties, minus any\n   demand-response credits. Reported against the do-nothing baseline.\n2. **Reliability contribution.** Of the megawatt-hours a curtailment order\n   requires, how many you actually deliver. An appeal's credit counts only in\n   the cost.\n\nEvery turn is one hour: read the board, set your response, commit. The\nscoring function is published and versioned, so you can argue with it\nafterward. That argument is the point.\n",
+  "difficulty_rank": 2,
+  "events": [
+    {
+      "credit_usd_per_mwh": 150.0,
+      "notice_md": "**Conservation appeal.** The system operator requests voluntary demand reduction 10:00-13:00. Demonstrated reduction earns $150/MWh if you opt in.",
+      "turn": 1,
+      "turns_active": [
+        2,
+        3,
+        4
+      ],
+      "type": "conservation_appeal"
+    },
+    {
+      "mw_requested": 40.0,
+      "notice_md": "**Emergency curtailment order.** Effective 13:00, reduce net grid draw by **40 MW** for 3 hours. Delivery is measured against your nominal draw; shortfall is public.",
+      "turn": 4,
+      "turns_active": [
+        5,
+        6,
+        7
+      ],
+      "type": "curtailment_order"
+    }
+  ],
+  "grid": {
+    "price_usd_per_mwh": [
+      42.13,
+      48.13,
+      55.53,
+      63.99,
+      919.35,
+      3274.51,
+      4582.0,
+      3936.24,
+      1898.95,
+      64.99,
+      60.74,
+      57.36,
+      50.07,
+      42.87,
+      37.65,
+      34.4
+    ],
+    "system_status": [
+      "normal",
+      "normal",
+      "normal",
+      "watch",
+      "emergency",
+      "emergency",
+      "emergency",
+      "emergency",
+      "emergency",
+      "watch",
+      "watch",
+      "watch",
+      "normal",
+      "normal",
+      "normal",
+      "normal"
+    ]
+  },
+  "pack_version": "0.3.0",
+  "provenance": {
+    "notes": "Prices derived, not observed: 22 + 60*L^3 $/MWh with a 4500*(L-0.93)/0.07 scarcity adder above L=0.93 of annual peak (ORDC-style). Status from annual load percentiles (watch>=p97, emergency>=p99.5); curtailment-order turns forced to emergency. Campus IT load authored, not observed: RTS-GMLC models no data center, so the campus draws a 280 MW floor plus a 20 MW cooling swing that follows the day's system load, 280 + 20*(L-Lmin)/(Lmax-Lmin) with L the hour's load as a fraction of annual peak and Lmin, Lmax its lowest and highest over the day's turns, rounded to 0.1 MW. Believable-not-certified per vision \u00a75.",
+    "region": "system (regions 1+2+3)",
+    "source": "GridMod/RTS-GMLC DAY_AHEAD_regional_Load.csv (public), regions summed",
+    "source_day": "2020-08-26 (annual peak-load day), periods 9-24",
+    "source_license": "NREL Data Use Disclaimer Agreement: use, copy and distribute for any purpose, keeping the notice with all copies; credit DOE, NREL and ALLIANCE in publications. Series in this pack are DERIVED from the source, never restated from it.",
+    "source_url": "https://github.com/GridMod/RTS-GMLC"
+  },
+  "scenario_id": "S-03",
+  "scoring": {
+    "baseline_cost_usd": 4533325.86,
+    "metrics": [
+      {
+        "direction": "minimize",
+        "id": "cost",
+        "label": "Operating cost",
+        "unit": "USD"
+      },
+      {
+        "direction": "maximize",
+        "id": "reliability",
+        "label": "Reliability contribution",
+        "unit": "ratio"
+      }
+    ],
+    "optimal_cost_usd": 2360524.94,
+    "score_version": "1.0.0"
+  },
+  "site": {
+    "battery": {
+      "efficiency_rt": 0.88,
+      "energy_mwh": 400.0,
+      "initial_soc": 0.5,
+      "power_mw": 100.0
+    },
+    "diesel": {
+      "fuel_usd_per_mwh": 65.0,
+      "permit_hours_remaining": 4,
+      "power_mw": 60.0
+    },
+    "it_load_mw": [
+      285.1,
+      288.2,
+      291.4,
+      294.5,
+      297.2,
+      299.0,
+      300.0,
+      299.5,
+      298.0,
+      294.9,
+      293.4,
+      292.1,
+      289.1,
+      285.5,
+      282.3,
+      280.0
+    ],
+    "name": "Vulcan Flats Campus",
+    "sla_usd_per_mwh_shed": 6000.0
+  },
+  "start_hour_local": 8,
+  "step_minutes": 60,
+  "substrate": "RTS-GMLC",
+  "title": "Curtailment Order",
+  "turns": 16
+}

@@ -1,3 +1,5 @@
+// GENERATED from martymcenroe/Palaestra by tools/export_exedra.py (#323). Do not edit it here: a change made here is overwritten by the next export and fails the drift test. Change it upstream, or open an issue with a scenario pack that shows the problem.
+
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/privacy-policy")({
@@ -10,17 +12,13 @@ function PrivacyPolicy() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight text-ink">Privacy policy</h1>
-      <p className="mt-1 text-sm text-ink-dim">Effective 2026-07-26 · Palaestra (palaestra.thrivetech.ai)</p>
+      <p className="mt-1 text-sm text-ink-dim">Effective 2026-11-05 · Palaestra (palaestra.thrivetech.ai)</p>
 
       <div className="mt-6 space-y-6 text-sm leading-relaxed text-ink-mute">
         <section>
-          <h2 className="text-base font-semibold text-ink">What Palaestra is</h2>
+          <h2 className="text-base font-semibold text-ink">Who we are</h2>
           <p className="mt-1">
-            Palaestra is a noncommercial educational venue and research instrument for the
-            interface between the electric grid and very large loads. Understanding what it
-            collects starts with what it is: every episode you play produces a log of the
-            scenario's observations, your actions, and the resolved outcomes. That log is the
-            point — it is how the venue discovers where technical rules bend.
+            Thrive Tech owns Palaestra and is the controller of its data.
           </p>
         </section>
 
@@ -28,120 +26,138 @@ function PrivacyPolicy() {
           <h2 className="text-base font-semibold text-ink">What we collect</h2>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>
-              <strong className="text-ink">Sign-in required:</strong> playing requires signing
-              in; guest play is closed. Historical guest accounts (a random identifier and
-              episode data, nothing identifying) keep their records under the same rights
-              described here.
+              You sign in with LinkedIn or GitHub. Your player record holds the name and email
+              address your sign-in provider sends us, with the identifier the provider keeps for
+              you. A GitHub name is your username when your profile sets no name, and a GitHub
+              address is your primary verified address. Your sign-in records hold the time of
+              each sign-in. We also receive a profile photo URL from LinkedIn and discard it within
+              the sign-in request. We receive your public profile and your list of email addresses
+              from GitHub, and we discard the rest of both within the sign-in request.
             </li>
             <li>
-              <strong className="text-ink">If you sign in with LinkedIn:</strong> your name,
-              email address, and LinkedIn's stable subject identifier. We request no other
-              LinkedIn data and cannot see your connections, posts, or activity.
+              Your episode data holds the scenario state and your committed action on each turn,
+              with each episode's score. Guest accounts hold only a random identifier and episode
+              data.
             </li>
             <li>
-              <strong className="text-ink">Your photo, which we throw away:</strong> LinkedIn
-              includes a profile photo URL in the sign-in response whether we ask for it or
-              not, because it travels with the standard profile scope. We do not store it, do
-              not display it, and do not log it — it is discarded with the rest of the
-              response. We would rather tell you precisely what happens than claim we never
-              receive it.
+              We keep an onboarding record of each of these events, with its time:
+              <ul className="mt-1 list-[circle] space-y-1 pl-5">
+                <li>reaching a step of the guided tour</li>
+                <li>committing your first turn</li>
+                <li>pausing for 10 seconds</li>
+                <li>starting the scenario suggested at the end of an episode</li>
+              </ul>
+              We read the onboarding records and the last turn of each unfinished episode to
+              find the points where new players pause or quit the game.
             </li>
             <li>
-              <strong className="text-ink">Episode data:</strong> the turns you play — scenario
-              state shown to you, actions you commit, scores. Attributed to your player
-              identity.
+              We keep concept inferences, which estimate the concepts you have learned from your
+              play and your work in the lessons. We use the inferences to choose your lesson
+              questions and the scenarios available to you.
             </li>
             <li>
-              <strong className="text-ink">Sign-in records:</strong> the time of each sign-in,
-              and nothing else about it — no IP address, no location, no device details.
-              Kept ninety days, then deleted automatically.
+              A problem report you send carries these items:
+              <ul className="mt-1 list-[circle] space-y-1 pl-5">
+                <li>your message</li>
+                <li>the page you were on, without its query parameter values</li>
+                <li>the app version</li>
+                <li>your player identity, since only a signed-in player can send a report</li>
+              </ul>
+              If you keep the technical trace attached, the report also carries the trace your
+              browser holds in memory:
+              <ul className="mt-1 list-[circle] space-y-1 pl-5">
+                <li>recent in-app errors, with their request references</li>
+                <li>
+                  the results of any connection check you ran, which say only whether a session
+                  was present
+                </li>
+                <li>your browser's user-agent string</li>
+              </ul>
+              The browser removes any value in the form of a credential, such as a token or an
+              authorization code, before the value enters the trace. The trace leaves your
+              machine only when you send a problem report. We use problem reports only to fix
+              the reported problems.
             </li>
             <li>
-              <strong className="text-ink">Problem reports, only when you send one:</strong>{" "}
-              your message, the page you were on, the app version, and your player identity if
-              you are signed in. If you leave the attach box ticked, the report also carries a
-              technical trace kept in your browser's memory: recent in-app errors with their
-              request reference IDs, the results of any connection check you ran (including
-              whether and as whom you were signed in), the page the trace was captured on, and
-              your browser's user-agent string — the one device detail a bug report genuinely
-              needs. The trace never leaves your machine on its own — you can download and
-              read every line of it before sending — and reports exist solely so we can fix
-              what you hit.
-            </li>
-            <li>
-              <strong className="text-ink">Notification address:</strong> only if you provide
-              one on your profile (or accept the suggestion from your LinkedIn profile), only
-              for the notifications you opt into, and removable there at any time.
+              If you enter a notification address on your profile, or accept the one your
+              sign-in provider supplies, we use it only for your chosen notifications. You can remove it from
+              your profile at any time. We keep a record of each notification we prepare for
+              you.
             </li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-ink">What we never do</h2>
+          <h2 className="text-base font-semibold text-ink">Sign-in and cookies</h2>
+          <p className="mt-1">
+            We use your sign-in provider's access token only within the sign-in request, to read
+            your profile and email address, and then discard it. Palaestra sets cookies only for
+            sign-in, and they hold these values:
+          </p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>No selling or renting of personal data, to anyone, ever.</li>
-            <li>No advertising, no trackers, no analytics beyond our own server logs.</li>
-            <li>
-              No storage of LinkedIn access tokens — they are used once to read your profile
-              at sign-in and immediately discarded.
-            </li>
-            <li>Only essential cookies: your session, and a short-lived sign-in CSRF guard.</li>
+            <li>your session, which lasts 30 days unless you sign out sooner</li>
+            <li>a random value that blocks forged sign-ins, for 10 minutes</li>
+            <li>the page you came from, if any, for 10 minutes</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-ink">Retention and leaderboards</h2>
+          <h2 className="text-base font-semibold text-ink">Leaderboards</h2>
           <p className="mt-1">
-            Palaestra is a game, and games keep score. Your episodes and scores are{" "}
-            <strong className="text-ink">retained indefinitely</strong> so results remain
-            comparable over time. Scores and display names may appear on public leaderboards;
-            you can opt out of leaderboard display while keeping your account — your data then
-            stays out of any public board but is still retained for play history and research.
+            Public leaderboards may show your display name and scores. You can opt out and keep
+            your account. An opt-out hides your entries from public view.
           </p>
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-ink">How episode data is used</h2>
+          <h2 className="text-base font-semibold text-ink">Research</h2>
           <p className="mt-1">
-            Episode logs may be analyzed and published as part of standards-needs research —
-            for example, "players given this rule consistently exploited this ambiguity." Any
-            published analysis is aggregated or de-identified; your name is never attached to
-            published results without your explicit consent.
+            We may analyze episode data and publish the results as research on gaps in
+            technical standards. We publish only aggregated or de-identified analysis, and we
+            attach your name to a published result only with your explicit consent.
           </p>
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-ink">Where data lives, and your rights</h2>
+          <h2 className="text-base font-semibold text-ink">Storage and your rights</h2>
           <p className="mt-1">
-            Data is stored on Cloudflare infrastructure (D1 and R2). To have every record
-            associated with your identity wiped, email{" "}
+            Cloudflare stores the data for us. We never sell or rent personal data. We keep the
+            records keyed to your identity until you ask for erasure.
+          </p>
+          <p className="mt-1">
+            To erase those records, email{" "}
+            <a
+              href="mailto:GDPR-request@palaestra.thrivetech.ai"
+              className="text-accent hover:underline"
+            >
+              GDPR-request@palaestra.thrivetech.ai
+            </a>
+            . We delete these records within 30 days of your request, for anyone in any country:
+          </p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            <li>your player record</li>
+            <li>your episode data</li>
+            <li>your sign-in records</li>
+            <li>your problem reports and their traces</li>
+            <li>your onboarding records</li>
+            <li>your concept inferences</li>
+            <li>your notification records</li>
+          </ul>
+          <p className="mt-1">
+            Write to{" "}
             <a
               href="mailto:GDPR-request@palaestra.thrivetech.ai"
               className="text-accent hover:underline"
             >
               GDPR-request@palaestra.thrivetech.ai
             </a>{" "}
-            — erasure requests are honored within 30 days and remove your player record,
-            episodes, turns, and sign-in records completely.{" "}
-            <strong className="text-ink">
-              This right does not depend on where you live.
-            </strong>{" "}
-            The address says GDPR because that is the law which named the right, not because
-            the right is reserved for the people that law happens to cover. Ask, wherever you
-            are, and it is honored the same way. You can download everything we hold about you
-            at any time from your profile ("Export my data"). For anything else, write{" "}
+            for a copy of any record in this list. We send each copy within 30 days. The download on your profile carries your player
+            record and sign-in records, with your episode data. For any other privacy question,
+            write to{" "}
             <a href="mailto:support@palaestra.thrivetech.ai" className="text-accent hover:underline">
               support@palaestra.thrivetech.ai
             </a>
-            . Signing out removes the session cookie immediately.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-base font-semibold text-ink">Changes</h2>
-          <p className="mt-1">
-            If this policy changes materially, the effective date above changes with it, and
-            the full history is public in the project's version control.
+            .
           </p>
         </section>
       </div>
