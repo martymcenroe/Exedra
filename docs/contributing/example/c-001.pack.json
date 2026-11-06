@@ -1,0 +1,106 @@
+{
+ "brief_md": "## C-001 · A Worked Example\n\nA six-hour morning on a **90 MW campus**: cheap dawn hours to fill a 40 MW battery, a paid conservation appeal, then a $1,100 hour carrying a 15 MW curtailment order. Built for the contributor guide, in the S-00 style.\n\n**Your assets:** a 40 MW / 80 MWh battery and a 15 MW natural-gas generator with 2 permitted run-hours.",
+ "events": [
+  {
+   "credit_usd_per_mwh": 90,
+   "notice_md": "**Conservation appeal.** The system operator requests voluntary demand reduction 08:00-10:00. Demonstrated reduction earns $90/MWh if you opt in.",
+   "turn": 1,
+   "turns_active": [
+    2,
+    3
+   ],
+   "type": "conservation_appeal"
+  },
+  {
+   "mw_requested": 15,
+   "notice_md": "**Emergency curtailment order.** Effective 10:00, reduce net grid draw by **15 MW** for one hour. Delivery is measured against your nominal draw.",
+   "turn": 3,
+   "turns_active": [
+    4
+   ],
+   "type": "curtailment_order"
+  }
+ ],
+ "grid": {
+  "price_usd_per_mwh": [
+   40,
+   55,
+   65,
+   500,
+   1100,
+   110
+  ],
+  "system_status": [
+   "normal",
+   "normal",
+   "normal",
+   "watch",
+   "emergency",
+   "normal"
+  ]
+ },
+ "pack_version": "0.1.0",
+ "provenance": {
+  "authors": [
+   {
+    "affiliation": "Example State University",
+    "name": "A. Contributor"
+   }
+  ],
+  "cohort": "worked example for the contributor guide (not a real submission)",
+  "notes": "Hand-authored teaching numbers in the S-00 style: flat 90 MW load, one appeal, one order, disjoint windows.",
+  "region": "a worked example",
+  "source": "hand-authored (no external dataset)",
+  "source_day": "any morning",
+  "source_license": "CC0 (author-created numbers, no external data)",
+  "source_url": "https://github.com/example/none-this-is-hand-authored"
+ },
+ "scenario_id": "C-001",
+ "scoring": {
+  "baseline_cost_usd": 168300,
+  "metrics": [
+   {
+    "direction": "minimize",
+    "id": "cost",
+    "label": "Operating cost",
+    "unit": "USD"
+   },
+   {
+    "direction": "maximize",
+    "id": "reliability",
+    "label": "Reliability contribution",
+    "unit": "ratio"
+   }
+  ],
+  "optimal_cost_usd": 61000,
+  "score_version": "1.0.0"
+ },
+ "site": {
+  "battery": {
+   "efficiency_rt": 0.9,
+   "energy_mwh": 80,
+   "initial_soc": 0,
+   "power_mw": 40
+  },
+  "diesel": {
+   "fuel_usd_per_mwh": 130,
+   "permit_hours_remaining": 2,
+   "power_mw": 15
+  },
+  "it_load_mw": [
+   90,
+   90,
+   90,
+   90,
+   90,
+   90
+  ],
+  "name": "Example Yard",
+  "sla_usd_per_mwh_shed": 5500
+ },
+ "start_hour_local": 6,
+ "step_minutes": 60,
+ "substrate": "synthetic",
+ "title": "A Worked Example",
+ "turns": 6
+}

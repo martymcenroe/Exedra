@@ -1,0 +1,493 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palaestra.thrivetech.ai/schema/scenario-pack.v0.schema.json",
+  "title": "Palaestra Scenario Pack v0",
+  "description": "A self-contained, declarative scenario the platform loads. Scenarios are data, never code (vision §5). Normative companion to docs/design/0003-competitor-contract.md.",
+  "type": "object",
+  "required": [
+    "pack_version",
+    "scenario_id",
+    "title",
+    "substrate",
+    "brief_md",
+    "step_minutes",
+    "turns",
+    "start_hour_local",
+    "site",
+    "grid",
+    "events",
+    "scoring"
+  ],
+  "additionalProperties": false,
+  "if": {
+    "required": ["scenario_id"],
+    "properties": { "scenario_id": { "pattern": "^C-" } }
+  },
+  "then": {
+    "required": ["provenance"],
+    "properties": {
+      "provenance": {
+        "required": ["authors", "cohort", "source", "source_url", "source_license"]
+      }
+    }
+  },
+  "properties": {
+    "pack_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "scenario_id": {
+      "type": "string",
+      "pattern": "^(S-\\d{2}|C-\\d{3})$",
+      "description": "S-nn is the curated catalogue; C-nnn is the contributed library (#214, design 0007). The id reaches URLs and the community view, so it is a citation handle and stays opaque and stable: author and institution names live in provenance, where they can be corrected without breaking a link."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "substrate": { "type": "string", "minLength": 1 },
+    "provenance": {
+      "type": "object",
+      "description": "Where the numbers came from: source dataset, region, day, derivations. Contributed packs must carry authorship, source and licence — enforced by the conditional at the foot of this schema rather than here, so the five catalogue packs are unaffected.",
+      "properties": {
+        "source": { "type": "string" },
+        "region": { "type": "string" },
+        "source_day": { "type": "string" },
+        "notes": { "type": "string" },
+        "source_url": {
+          "type": "string",
+          "description": "The operator's published dataset, so a reader can go and check."
+        },
+        "source_license": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Named licence of the source data. The contributor attests it permits redistribution of the derived series inside this pack (#217)."
+        },
+        "source_notice": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The source's notice, in full and verbatim, when the source's terms require it in every copy of the data (#659, #669). Absent when the terms ask for none."
+        },
+        "cohort": {
+          "type": "string",
+          "description": "The workshop and host institution this pack came from, if any."
+        },
+        "authors": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Named authorship. The grant promises it and it is the whole incentive for a student to do the work, so it lives in the artifact rather than a spreadsheet beside it.",
+          "items": {
+            "type": "object",
+            "required": ["name", "affiliation"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "affiliation": { "type": "string", "minLength": 1 },
+              "orcid": { "type": "string" }
+            }
+          }
+        },
+        "system_load_scope": {
+          "type": "object",
+          "required": ["excluded"],
+          "additionalProperties": false,
+          "description": "What the published load series actually counts (#221). A public series is a measurement with a definition, and the definition is part of the provenance: ERCOT meters Wholesale Storage Load separately, so its reported system load excludes battery charging by construction. The community reading divides the neighbours' bill across others' consumption derived from this series, so an unstated exclusion understates the denominator. Required whenever grid.status_response is present.",
+          "properties": {
+            "excluded": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Loads the published series does NOT count. An empty array means the question was asked and the answer is nothing; absence of the field means nobody asked."
+            },
+            "included": { "type": "array", "items": { "type": "string" } },
+            "definition_url": { "type": "string" }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "brief_md": { "type": "string", "minLength": 1 },
+    "coach_md": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional per-turn coaching lines (the paidotribes speaking); length must equal turns. Presence marks a tutorial pack."
+    },
+    "step_minutes": { "type": "integer", "minimum": 1 },
+    "turns": { "type": "integer", "minimum": 1, "maximum": 96 },
+    "start_hour_local": { "type": "number", "minimum": 0, "maximum": 23.75 },
+    "site": {
+      "type": "object",
+      "required": ["name", "it_load_mw", "sla_usd_per_mwh_shed", "battery", "diesel"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "it_load_mw": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0 },
+          "minItems": 1,
+          "description": "Per-turn nominal IT demand; length must equal turns."
+        },
+        "sla_usd_per_mwh_shed": { "type": "number", "minimum": 0 },
+        "battery": {
+          "type": "object",
+          "required": ["power_mw", "energy_mwh", "efficiency_rt", "initial_soc"],
+          "additionalProperties": false,
+          "properties": {
+            "power_mw": { "type": "number", "minimum": 0 },
+            "energy_mwh": { "type": "number", "minimum": 0 },
+            "efficiency_rt": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "initial_soc": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "diesel": {
+          "type": "object",
+          "required": ["power_mw", "permit_hours_remaining", "fuel_usd_per_mwh"],
+          "additionalProperties": false,
+          "properties": {
+            "power_mw": { "type": "number", "minimum": 0 },
+            "permit_hours_remaining": { "type": "integer", "minimum": 0 },
+            "fuel_usd_per_mwh": { "type": "number", "minimum": 0 },
+            "fuel_usd_per_mwh_series": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 0 },
+              "minItems": 1,
+              "description": "Optional fuel price per turn (#469), overriding fuel_usd_per_mwh turn by turn; length must equal turns. The player's screen sees this hour's price and the next three, as it sees grid prices; the rest stays on the server. Absent = fuel_usd_per_mwh every turn, bit-identical to engine 0.7.0."
+            },
+            "supply_options": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Optional fuel supply arrangements (#469), one chosen at turn 0 through Action.supply; the first is taken when none is named. The chosen option costs premium_usd_per_turn every turn and caps gas output at available_mw[t]. Its terms are public, as a contract's are. Absent = unlimited supply at no premium, bit-identical to engine 0.7.0.",
+              "items": {
+                "type": "object",
+                "required": ["id", "label", "premium_usd_per_turn", "available_mw"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+                  "label": { "type": "string", "minLength": 1 },
+                  "premium_usd_per_turn": { "type": "number", "minimum": 0 },
+                  "available_mw": {
+                    "type": "array",
+                    "items": { "type": "number", "minimum": 0 },
+                    "description": "Gas this arrangement can deliver each turn, in MW; length must equal turns. Zero is a turn with no gas, such as a weekend with no spot market."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "stocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "unit", "initial", "capacity", "burn_per_mwh_generated"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "unit": { "type": "string", "minLength": 1 },
+              "initial": { "type": "number", "minimum": 0 },
+              "capacity": { "type": "number", "minimum": 0 },
+              "burn_per_mwh_generated": { "type": "number", "minimum": 0 },
+              "deliveries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["turn", "quantity"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "turn": { "type": "integer", "minimum": 0 },
+                    "quantity": { "type": "number", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "grid": {
+      "type": "object",
+      "required": ["price_usd_per_mwh", "system_status"],
+      "additionalProperties": false,
+      "properties": {
+        "price_usd_per_mwh": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 1,
+          "description": "Per-turn energy price AT NOMINAL CAMPUS DRAW; length must equal turns."
+        },
+        "system_status": {
+          "type": "array",
+          "items": { "enum": ["normal", "watch", "emergency"] },
+          "minItems": 1,
+          "description": "Per-turn system condition; length must equal turns."
+        },
+        "price_slope_usd_per_mwh_per_mw": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0 },
+          "description": "Optional grid response (contract §5 amendment, #69): per-turn marginal price sensitivity to the campus's deviation from nominal draw. Absent = price-taker behavior, bit-identical to engine v0.1. Length must equal turns."
+        },
+        "import_limit_mw": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0 },
+          "description": "Optional physical import limit (tie derate, feeder outage). The engine caps grid import and sheds the remainder. Absent is unbounded, bit-identical. Length must equal turns."
+        },
+        "forecast": {
+          "type": "object",
+          "required": ["price_usd_per_mwh"],
+          "additionalProperties": false,
+          "description": "Optional grid response v2 (0004, #134): honest forecasts as data. When present, the observation shows the player these values for future turns instead of the actuals. Settlement arithmetic never reads forecasts, so absent-field packs are bit-identical by construction. The error model must be documented in provenance; no RNG at play time — the fog is data.",
+          "properties": {
+            "price_usd_per_mwh": {
+              "type": "array",
+              "items": { "type": "array", "items": { "type": "number" } },
+              "minItems": 1,
+              "description": "price_usd_per_mwh[from_turn][h] = the price forecast for turn from_turn+1+h, as seen at from_turn. Outer length must equal turns; inner length covers the observation horizon."
+            },
+            "system_status": {
+              "type": "array",
+              "items": { "type": "array", "items": { "enum": ["normal", "watch", "emergency"] } },
+              "description": "Optional status forecast, same indexing. Absent = actual statuses are shown (status outlooks are public in real operations)."
+            }
+          }
+        },
+        "status_response": {
+          "type": "object",
+          "required": ["system_load_mw", "watch_level_mw", "emergency_level_mw"],
+          "additionalProperties": false,
+          "description": "Optional grid response v1 (0004, #133): when present the engine grades each hour's REALIZED status from system load including the campus's deviation from nominal draw. Absent = the static system_status strip stands alone, bit-identical to prior engines.",
+          "properties": {
+            "system_load_mw": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 0 },
+              "minItems": 1,
+              "description": "Per-turn system load at nominal campus draw; length must equal turns."
+            },
+            "watch_level_mw": { "type": "number", "minimum": 0 },
+            "emergency_level_mw": { "type": "number", "minimum": 0 }
+          }
+        },
+        "observation_outage": {
+          "type": "array",
+          "description": "Optional observation freeze windows (#468). During active turns, frozen fields repeat their last seen values, and stale is true unless the outage is silent (announced: false, #697). Settlement strictly continues on actuals.",
+          "items": {
+            "type": "object",
+            "required": ["turns_active", "frozen_fields"],
+            "additionalProperties": false,
+            "properties": {
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 1 },
+                "minItems": 1,
+                "description": "Turns on which observation fields freeze. Must be >= 1 (cannot freeze turn 0)."
+              },
+              "frozen_fields": {
+                "type": "array",
+                "items": {
+                  "enum": ["price_usd_per_mwh", "system_status", "forecast"]
+                },
+                "minItems": 1,
+                "uniqueItems": true,
+                "description": "Observation fields frozen during the outage."
+              },
+              "announced": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether the screen is told (#697). True or absent: the observation marks the frozen fields stale, with the turn each repeats (stale, stale_as_of). False: the fields still repeat their last values, but the observation carries neither, so the screen reads as current."
+              }
+            }
+          }
+        }
+      }
+    },
+    "difficulty_rank": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Position in the catalogue's binding difficulty ordering (#126), 0 = easiest. Presentation metadata: the ladder the play page sorts by. Optional; absent packs sort last."
+    },
+    "requires_concepts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional curriculum gate (#144, design 0005): concept names the player must have ESTABLISHED before starting this scenario. Absent = open to all; behavior for existing packs is unchanged."
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["turn", "type", "credit_usd_per_mwh", "turns_active"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "conservation_appeal" },
+              "credit_usd_per_mwh": { "type": "number", "minimum": 0 },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["turn", "type", "mw_requested", "turns_active"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "curtailment_order" },
+              "mw_requested": { "type": "number", "exclusiveMinimum": 0 },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "description": "An inducement to RAISE draw during a surplus window (#369): the mirror of conservation_appeal. Credit is paid per MWh drawn ABOVE nominal IT demand, which charging the battery produces. Without this type the engine can only express 'use less', so the oversupply half of the large-load interface question cannot be posed.",
+            "required": ["turn", "type", "credit_usd_per_mwh", "turns_active"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "absorption_appeal" },
+              "credit_usd_per_mwh": { "type": "number", "minimum": 0 },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Information only (#635): shown while active, read by no arithmetic. A pipeline's critical notice is one.",
+            "required": ["turn", "type", "turns_active", "notice_md"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "notice" },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string", "minLength": 1 }
+            }
+          },
+          {
+            "type": "object",
+            "description": "An operational flow order (#635): on each turn in turns_active the named nomination settles against tolerance_mw in place of its own. Hidden until its turn, unlike a commitment's public terms.",
+            "required": ["turn", "type", "commitment", "tolerance_mw", "turns_active"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "flow_order" },
+              "commitment": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "tolerance_mw": { "type": "number", "minimum": 0 },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "description": "An FPA 202(c) emergency order (#465): on each turn in turns_active where the condition holds, gas output spends no permit hour and is counted as order_hours_used instead. last_resort holds only on turns the system_status strip calls emergency; always holds on every active turn. suspends_permit is the only form built; a fixed grant of hours is #644.",
+            "required": ["turn", "type", "suspends_permit", "condition", "turns_active"],
+            "additionalProperties": false,
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "type": { "const": "emergency_order" },
+              "suspends_permit": { "const": true },
+              "condition": { "enum": ["always", "last_resort"] },
+              "turns_active": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0 },
+                "minItems": 1
+              },
+              "notice_md": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "commitments": {
+      "type": "array",
+      "description": "Forward decisions (#464): a quantity the player names on decision_turn, then settles each window turn against. Absent = no forward decisions, and settlement is bit-identical to engine 0.6.0.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "label", "decision_turn", "window", "max_mw"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "kind": { "enum": ["nomination", "demand_response"] },
+          "label": { "type": "string", "minLength": 1 },
+          "decision_turn": { "type": "integer", "minimum": 0 },
+          "window": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0 },
+            "minItems": 1
+          },
+          "max_mw": { "type": "number", "minimum": 0 },
+          "notice_md": { "type": "string" },
+          "imbalance_usd_per_mwh": {
+            "type": "number",
+            "minimum": 0,
+            "description": "nomination: charged per MWh of gas output outside tolerance, above or below the nomination."
+          },
+          "tolerance_mw": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0 },
+            "description": "nomination: free deviation per window turn, aligned with window. Public from turn 0 like every term; an operational flow order that arrives mid-window is a flow_order event (#635)."
+          },
+          "caps_gas": {
+            "type": "boolean",
+            "description": "nomination: gas output on each window turn is capped at the nomination plus that turn's tolerance, because no other gas can be bought (#635)."
+          },
+          "capacity_usd_per_mw": {
+            "type": "number",
+            "minimum": 0,
+            "description": "demand_response: paid per enrolled MW on the decision turn."
+          },
+          "nonperformance_usd_per_mwh": {
+            "type": "number",
+            "minimum": 0,
+            "description": "demand_response: charged per MWh of relief below the enrolment on a window turn under a curtailment order."
+          }
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["score_version", "metrics", "baseline_cost_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "score_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "baseline_cost_usd": {
+          "type": "number",
+          "description": "Do-nothing episode cost: what the engine charges a player who sets every control to zero every turn (no curtailment, no battery, no on-site generation, no commitment, no supply choice). On most days that is full IT demand bought from the grid; where an import limit binds, the load above it is shed at the SLA price. The cost metric's denominator. The acceptance gate rejects a pack whose stated figure differs from the engine's by a cent (#665)."
+        },
+        "optimal_cost_usd": {
+          "type": "number",
+          "description": "Exact minimum cost among fully-delivering plays (#93): the gold line, which stars measure against. The compiler certifies a catalogue scenario with the exact permit-hour enumeration and battery LP where that reaches, and with the exact MILP (compute_optimal_milp) otherwise; the acceptance gate (tools/verify_pack.py) discards a contributed figure and certifies every contributed pack with the MILP (#670). Either way the engine replays the certified line to the penny. Absent where no optimum can be certified, as on grid-response packs."
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "direction", "unit"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "enum": ["cost", "reliability"] },
+              "label": { "type": "string" },
+              "direction": { "enum": ["minimize", "maximize"] },
+              "unit": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

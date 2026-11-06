@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palaestra.thrivetech.ai/schema/episode.v0.schema.json",
+  "title": "Palaestra Episode Log v0",
+  "description": "The instrument's output: one episode's append-only record. Normative companion to docs/design/0003-competitor-contract.md §8. score(replay(log)) must equal final.",
+  "type": "object",
+  "required": ["episode_id", "scenario_id", "pack_version", "engine_version", "score_version", "player", "turns", "final"],
+  "additionalProperties": false,
+  "properties": {
+    "episode_id": { "type": "string", "minLength": 1 },
+    "scenario_id": { "type": "string", "pattern": "^S-\\d{2}$" },
+    "pack_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "engine_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "score_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "started_at": { "type": "string" },
+    "completed_at": { "type": "string" },
+    "player": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Provider-prefixed stable id, e.g. linkedin:<sub> or guest:<uuid>." },
+        "kind": { "enum": ["human", "agent"] },
+        "display_name": { "type": "string" }
+      }
+    },
+    "turns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["idx", "observation", "action", "resolution"],
+        "additionalProperties": false,
+        "properties": {
+          "idx": { "type": "integer", "minimum": 0 },
+          "observation": { "$ref": "#/$defs/observation" },
+          "action": { "$ref": "#/$defs/action" },
+          "resolution": { "$ref": "#/$defs/resolution" }
+        }
+      }
+    },
+    "final": {
+      "type": "object",
+      "required": ["cost_usd", "baseline_cost_usd", "reliability_delivered_mwh", "reliability_asked_mwh"],
+      "additionalProperties": false,
+      "properties": {
+        "cost_usd": { "type": "number" },
+        "baseline_cost_usd": { "type": "number" },
+        "reliability_delivered_mwh": { "type": "number", "minimum": 0 },
+        "reliability_asked_mwh": { "type": "number", "minimum": 0 },
+        "order_hours_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The day's gas hours run under an emergency order (#465), never in the cost; present only on packs with one."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "required": ["turn", "local_time", "price_usd_per_mwh", "system_status", "forecast", "site", "events", "ledger"],
+      "additionalProperties": false,
+      "properties": {
+        "turn": { "type": "integer", "minimum": 0 },
+        "local_time": { "type": "string" },
+        "price_usd_per_mwh": { "type": "number" },
+        "system_status": { "enum": ["normal", "watch", "emergency"] },
+        "import_limit_mw": {
+          "type": "number",
+          "minimum": 0,
+          "description": "This hour's grid import limit (#467), present only on packs that carry one. The current hour only: when a feeder returns is fog (#478)."
+        },
+        "forecast": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["price_usd_per_mwh", "system_status"],
+            "additionalProperties": false,
+            "properties": {
+              "price_usd_per_mwh": { "type": "number" },
+              "system_status": { "enum": ["normal", "watch", "emergency"] },
+              "fuel_usd_per_mwh": {
+                "type": "number",
+                "minimum": 0,
+                "description": "That hour's fuel price (#469), on packs with a fuel price series."
+              }
+            }
+          }
+        },
+        "site": {
+          "type": "object",
+          "required": ["it_demand_mw", "battery_soc_mwh", "diesel_permit_hours"],
+          "additionalProperties": false,
+          "properties": {
+            "it_demand_mw": { "type": "number", "minimum": 0 },
+            "battery_soc_mwh": { "type": "number", "minimum": 0 },
+            "diesel_permit_hours": { "type": "integer", "minimum": 0 },
+            "stocks": {
+              "type": "object",
+              "additionalProperties": { "type": "number" }
+            },
+            "fuel_usd_per_mwh": {
+              "type": "number",
+              "minimum": 0,
+              "description": "This hour's fuel price (#469), on packs with a fuel price series."
+            },
+            "gas_available_mw": {
+              "type": "number",
+              "minimum": 0,
+              "description": "What the chosen fuel supply can deliver this hour (#469), once one is chosen."
+            }
+          }
+        },
+        "commitments": {
+          "type": "object",
+          "description": "Each commitment's MW, or null before its decision turn (#464).",
+          "additionalProperties": { "type": ["number", "null"] }
+        },
+        "supply": {
+          "type": ["string", "null"],
+          "description": "The chosen fuel supply's id, or null before turn 0 is played (#469); present only on packs with supply options."
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "turns_active"],
+            "additionalProperties": true,
+            "properties": {
+              "type": { "enum": ["conservation_appeal", "curtailment_order", "absorption_appeal", "notice", "flow_order", "emergency_order"] },
+              "turns_active": { "type": "array", "items": { "type": "integer" } }
+            }
+          }
+        },
+        "ledger": {
+          "type": "object",
+          "required": ["cost_usd", "sla_shed_mwh", "reliability_delivered_mwh", "reliability_asked_mwh"],
+          "additionalProperties": false,
+          "properties": {
+            "cost_usd": { "type": "number" },
+            "sla_shed_mwh": { "type": "number", "minimum": 0 },
+            "reliability_delivered_mwh": { "type": "number", "minimum": 0 },
+            "reliability_asked_mwh": { "type": "number", "minimum": 0 },
+            "order_hours_used": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Gas hours run under an emergency order so far (#465), on packs with one."
+            }
+          }
+        },
+        "stale": {
+          "type": "boolean",
+          "description": "Present and true during an observation outage window (#468). Omitted on normal turns."
+        },
+        "stale_as_of": {
+          "type": "object",
+          "description": "Present with stale (#694): each frozen field, and the turn whose value it repeats.",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "price_usd_per_mwh": { "type": "integer", "minimum": 0 },
+            "system_status": { "type": "integer", "minimum": 0 },
+            "forecast": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["curtail_mw", "battery_mw", "diesel_mw"],
+      "additionalProperties": false,
+      "properties": {
+        "curtail_mw": { "type": "number", "minimum": 0 },
+        "battery_mw": { "type": "number", "description": "+discharge, -charge" },
+        "diesel_mw": { "type": "number", "minimum": 0 },
+        "accept_offer": { "type": "boolean" },
+        "commit": {
+          "type": "object",
+          "description": "Forward decisions (#464): commitment id -> MW, read only on that commitment's decision turn.",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        },
+        "supply": {
+          "type": "string",
+          "description": "The fuel supply option's id (#469), read only on turn 0."
+        }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "required": ["applied", "clamped", "grid_import_mw", "turn_cost_usd", "battery_soc_mwh", "diesel_permit_hours", "delivered_relief_mw"],
+      "additionalProperties": false,
+      "properties": {
+        "applied": { "$ref": "#/$defs/action" },
+        "clamped": { "type": "boolean" },
+        "clamp_notes": { "type": "array", "items": { "type": "string" } },
+        "grid_import_mw": { "type": "number", "minimum": 0 },
+        "turn_cost_usd": { "type": "number" },
+        "credit_usd": { "type": "number" },
+        "effective_price_usd_per_mwh": {
+          "type": "number",
+          "description": "The price actually paid after grid response (#69): strip price + slope x deviation from nominal. Equals the strip price when the pack declares no slope."
+        },
+        "battery_soc_mwh": { "type": "number", "minimum": 0 },
+        "diesel_permit_hours": { "type": "integer", "minimum": 0 },
+        "delivered_relief_mw": { "type": "number", "minimum": 0 },
+        "stocks": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "commitment_usd": {
+          "type": "number",
+          "description": "This turn's commitment settlement (#464), included in turn_cost_usd: imbalance and non-performance charges less any capacity payment."
+        },
+        "commitment_settlement_usd": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "supply_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "This turn's premium for the chosen fuel supply (#469), included in turn_cost_usd; present only on packs with supply options."
+        },
+        "order_hours_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Gas hours run under an emergency order after this turn (#465); present only on packs with one."
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+// GENERATED from martymcenroe/Palaestra by tools/export_exedra.py (#323). Do not edit it here: a change made here is overwritten by the next export and fails the drift test. Change it upstream, or open an issue with a scenario pack that shows the problem.
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -22,6 +24,38 @@ interface CheckRow {
   name: string;
   state: "pass" | "fail" | "info";
   detail: string;
+  /**
+   * What the breadcrumb records, when that must differ from what the page
+   * shows (#421).
+   *
+   * The page is for the person in front of it and may name them; the trace is
+   * stored for as long as their account exists. Seeing your own name on the
+   * screen is reassurance, and it is the one identifying string the venue
+   * would be adding to a permanent record on its own initiative rather than
+   * because the reporter typed it. Defaults to `detail`.
+   */
+  traceDetail?: string;
+}
+
+/**
+ * The "Signed in" row: what the page shows, and what the trace keeps (#421).
+ *
+ * Split out and exported so the difference between the two is testable. The
+ * page names the person, which is reassurance for the reader in front of it.
+ * The breadcrumb says only that a session exists, because the trace is stored
+ * for as long as the account is and the name answers no diagnostic question.
+ */
+export function sessionRow(player: { display_name?: string | null } | null): CheckRow {
+  if (!player) {
+    const both = "Not on this browser. Playing starts with Sign in with LinkedIn.";
+    return { name: "Signed in", state: "info", detail: both, traceDetail: both };
+  }
+  return {
+    name: "Signed in",
+    state: "info",
+    detail: `Yes — as ${player.display_name ?? "a player"}.`,
+    traceDetail: "Yes — a session is present.",
+  };
 }
 
 async function runChecks(): Promise<CheckRow[]> {
@@ -95,13 +129,7 @@ async function runChecks(): Promise<CheckRow[]> {
   try {
     const me = await fetch("/api/auth/me", { credentials: "include" });
     const body: { player?: { display_name?: string | null } | null } = await me.json();
-    rows.push({
-      name: "Signed in",
-      state: "info",
-      detail: body.player
-        ? `Yes — as ${body.player.display_name ?? "a player"}.`
-        : "Not on this browser. Playing starts with Sign in with LinkedIn.",
-    });
+    rows.push(sessionRow(body.player ?? null));
   } catch {
     rows.push({ name: "Signed in", state: "fail", detail: "The identity check did not answer." });
   }
@@ -115,7 +143,8 @@ function ConnectionCheck() {
 
   useEffect(() => {
     void runChecks().then((r) => {
-      for (const row of r) recordTrace("breadcrumb", `connection-check ${row.name}: ${row.detail}`);
+      for (const row of r)
+        recordTrace("breadcrumb", `connection-check ${row.name}: ${row.traceDetail ?? row.detail}`);
       setRows(r);
     });
   }, []);
@@ -126,7 +155,7 @@ function ConnectionCheck() {
   return (
     <Page
       title="Connection check"
-      subtitle="What is working from this browser, right now — screenshot this page if anyone asks."
+      subtitle="What is working from this browser, right now. Screenshot this page if anyone asks."
     >
       <div className="max-w-2xl rounded-lg border border-line bg-surface-1 p-6">
         {rows === null ? (
@@ -165,11 +194,11 @@ function ConnectionCheck() {
             >
               Run it again
             </button>
-            {/* The envelope, on the page that names it (#336). This screen is
-                handed to somebody who is stuck, who is often signed out
-                because signing in is what failed; telling them their results
-                travel inside a report and offering no way to send one is a
-                dead end at the moment of highest need. Works signed out. */}
+            {/* The envelope, on the page that names it (#336). Telling a
+                stuck player their results travel inside a report and offering
+                no way to send one is a dead end at the moment of highest need.
+                Reports come from signed-in players only (#689): a visitor who
+                opens it is offered sign-in, which returns them to this page. */}
             <SupportButton
               label="Send this to support"
               className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-surface-1 hover:opacity-90"

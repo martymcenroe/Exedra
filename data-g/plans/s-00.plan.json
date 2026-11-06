@@ -1,0 +1,40 @@
+{
+  "line": [
+    {
+      "battery_mw": -50.0,
+      "curtail_mw": 0,
+      "diesel_mw": 0
+    },
+    {
+      "battery_mw": -50.0,
+      "curtail_mw": 0,
+      "diesel_mw": 0
+    },
+    {
+      "battery_mw": -11.1111,
+      "curtail_mw": 0,
+      "diesel_mw": 0
+    },
+    {
+      "accept_offer": true,
+      "battery_mw": 50.0,
+      "curtail_mw": 0,
+      "diesel_mw": 20.0
+    },
+    {
+      "battery_mw": 50.0,
+      "curtail_mw": 0,
+      "diesel_mw": 20.0
+    },
+    {
+      "battery_mw": -0.0,
+      "curtail_mw": 0,
+      "diesel_mw": 0
+    }
+  ],
+  "optimal_cost_usd": 69716.67,
+  "pack_version": "0.3.0",
+  "scenario_id": "S-00",
+  "score_version": "1.0.0",
+  "solver": "enumerator"
+}

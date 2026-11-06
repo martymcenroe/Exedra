@@ -1,0 +1,107 @@
+{
+  "brief_md": "## S-00 \u00b7 First Shift\n\nYour first morning running a **100 MW campus**. Six hours, small stakes,\nand the paidotribes at your elbow the whole time.\n\n**Your assets:** a 50 MW / 100 MWh battery and a 20 MW natural-gas generator\nwith 2 permitted run-hours. Same rules as the real day: two scores,\npublished, in tension.\n\nNothing here can hurt you. That is what practice is for.\n",
+  "coach_md": [
+    "Prices are low this hour. This is when a campus fills its battery. Press **Fill \u221250**, then Commit. (Negative numbers fill; positive numbers drain.)",
+    "Still cheap. Top the battery off with **Fill \u221250** again, or commit zeros; zeros are always safe.",
+    "A **conservation appeal** just arrived: voluntary, and it pays. Tick the checkbox and **Drain +30**. You earn a credit for every megawatt you hand back.",
+    "Watch the forecast: the price is about to spike. Hold your remaining charge, commit zeros, and let the storm come to you.",
+    "An **order** this time, not optional. They asked for 20 MW. **Drain +50** covers it four times over at the day's worst price. Watch the green bar appear on the chart.",
+    "The day cools off. Zeros to the finish, and then read your settlement: both numbers, and where they came from."
+  ],
+  "difficulty_rank": 0,
+  "events": [
+    {
+      "credit_usd_per_mwh": 100.0,
+      "notice_md": "**Conservation appeal.** The system operator requests voluntary demand reduction 08:00-10:00. Demonstrated reduction earns $100/MWh if you opt in.",
+      "turn": 1,
+      "turns_active": [
+        2,
+        3
+      ],
+      "type": "conservation_appeal"
+    },
+    {
+      "mw_requested": 20.0,
+      "notice_md": "**Emergency curtailment order.** Effective 10:00, reduce net grid draw by **20 MW** for one hour. Delivery is measured against your nominal draw.",
+      "turn": 3,
+      "turns_active": [
+        4
+      ],
+      "type": "curtailment_order"
+    }
+  ],
+  "grid": {
+    "price_usd_per_mwh": [
+      45.0,
+      50.0,
+      60.0,
+      400.0,
+      900.0,
+      120.0
+    ],
+    "system_status": [
+      "normal",
+      "normal",
+      "normal",
+      "watch",
+      "emergency",
+      "normal"
+    ]
+  },
+  "pack_version": "0.3.0",
+  "provenance": {
+    "notes": "Deliberately clean arithmetic: flat 100 MW load, price strip 45/50/60/400/900/120. Tutorial per Palaestra #62.",
+    "region": "a campus of round numbers",
+    "source": "hand-authored teaching numbers (no external dataset)",
+    "source_day": "any morning you choose",
+    "source_license": "CC0 1.0 Universal public-domain dedication: hand-authored teaching numbers, no external dataset."
+  },
+  "scenario_id": "S-00",
+  "scoring": {
+    "baseline_cost_usd": 157500.0,
+    "metrics": [
+      {
+        "direction": "minimize",
+        "id": "cost",
+        "label": "Operating cost",
+        "unit": "USD"
+      },
+      {
+        "direction": "maximize",
+        "id": "reliability",
+        "label": "Reliability contribution",
+        "unit": "ratio"
+      }
+    ],
+    "optimal_cost_usd": 69716.67,
+    "score_version": "1.0.0"
+  },
+  "site": {
+    "battery": {
+      "efficiency_rt": 0.9,
+      "energy_mwh": 100.0,
+      "initial_soc": 0.0,
+      "power_mw": 50.0
+    },
+    "diesel": {
+      "fuel_usd_per_mwh": 120.0,
+      "permit_hours_remaining": 2,
+      "power_mw": 20.0
+    },
+    "it_load_mw": [
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0
+    ],
+    "name": "Practice Yard",
+    "sla_usd_per_mwh_shed": 6000.0
+  },
+  "start_hour_local": 6,
+  "step_minutes": 60,
+  "substrate": "synthetic",
+  "title": "First Shift",
+  "turns": 6
+}
