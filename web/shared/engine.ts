@@ -27,7 +27,10 @@ import type {
   SystemStatus,
 } from "./pack";
 
-export const ENGINE_VERSION = "0.13.0";
+export const ENGINE_VERSION = "0.14.0";
+
+/** What Action.fuel names for the plant's first fuel (#707). */
+export const PIPELINE_GAS = "gas";
 
 export interface Action {
   curtail_mw: number;
@@ -39,6 +42,9 @@ export interface Action {
   commit?: Record<string, number>;
   /** The fuel supply option's id (#469), read only on turn 0. */
   supply?: string;
+  /** The fuel the plant burns from this turn on (#707): "gas" or the
+   * alternate fuel's id. Absent keeps last turn's fuel. */
+  fuel?: string;
 }
 
 export type StockLevels = Record<string, number>;
@@ -60,6 +66,8 @@ export interface EngineState {
   supply?: string;
   /** Gas hours run under an emergency order (#465); present on packs with one. */
   order_hours_used?: number;
+  /** The fuel the plant is on (#707); present on packs with an alternate fuel. */
+  fuel?: string;
   last_shown_price_usd_per_mwh?: number;
   last_shown_system_status?: SystemStatus;
   last_shown_forecast?: { price_usd_per_mwh: number; system_status: SystemStatus; fuel_usd_per_mwh?: number }[];
@@ -84,6 +92,8 @@ export interface Observation {
     fuel_usd_per_mwh?: number;
     /** What the chosen supply can deliver this hour, once one is chosen (#469). */
     gas_available_mw?: number;
+    /** The fuel the plant is on, on packs with an alternate fuel (#707). */
+    fuel?: string;
   };
   /** Each commitment's MW, or null before its decision turn (#464). */
   commitments?: Record<string, number | null>;
@@ -184,16 +194,24 @@ export function applyStockDeliveries(
   return nextLevels;
 }
 
+/** Whether a stock burns on a turn the plant runs on `fuel` (#707): a stock
+ * bound to a fuel burns only on that fuel, every other stock on any. */
+function burnsOn(stock: Stock, fuel: string | undefined): boolean {
+  return stock.burns_on === undefined || stock.burns_on === fuel;
+}
+
 export function calculateStockClamp(
   stocks: Stock[],
   currentLevels: Record<string, number>,
   desiredDslMw: number,
   stepH: number,
+  fuel?: string,
 ): { clampedDslMw: number; bindingStockId?: string; wasClamped: boolean } {
   let bindingMw = desiredDslMw;
   let bindingStockId: string | undefined = undefined;
 
   for (const stock of stocks) {
+    if (!burnsOn(stock, fuel)) continue;
     if (stock.burn_per_mwh_generated > 0) {
       const level = currentLevels[stock.id] ?? 0;
       const maxMwh = level / stock.burn_per_mwh_generated;
@@ -216,9 +234,11 @@ export function applyStockBurn(
   currentLevels: Record<string, number>,
   actualDslMw: number,
   stepH: number,
+  fuel?: string,
 ): Record<string, number> {
   const nextLevels = { ...currentLevels };
   for (const stock of stocks) {
+    if (!burnsOn(stock, fuel)) continue;
     const burnAmount = actualDslMw * stepH * stock.burn_per_mwh_generated;
     const current = nextLevels[stock.id] ?? 0;
     nextLevels[stock.id] = Math.max(0, current - burnAmount);
@@ -272,6 +292,9 @@ export function init(pack: ScenarioPack): EngineState {
     ...(pack.commitments && { commitments: {} }),
     // The same for an emergency order (#465) and engine 0.9.0.
     ...(hasEmergencyOrder(pack) && { order_hours_used: 0 }),
+    // And for an alternate fuel (#707) and engine 0.13.0: every episode
+    // starts on pipeline gas.
+    ...(pack.site.diesel.alternate_fuel && { fuel: PIPELINE_GAS }),
     ...initialShown,
   };
 }
@@ -424,6 +447,7 @@ export function observe(pack: ScenarioPack, state: EngineState): Observation {
       ...(state.stocks ? { stocks: { ...state.stocks } } : {}),
       ...(fuel && { fuel_usd_per_mwh: fuel[t]! }),
       ...(chosen && { gas_available_mw: chosen.available_mw[t]! }),
+      ...(state.fuel !== undefined && { fuel: state.fuel }),
     },
     ...(pack.commitments && {
       commitments: Object.fromEntries(
@@ -547,6 +571,21 @@ export function resolve(
   }
   const option = options?.find((o) => o.id === supply);
 
+  // -- the plant's fuel (#707) -------------------------------------------------
+  // A dual-fuel plant burns pipeline gas or its alternate fuel, one per turn,
+  // and stays on the one it burned last turn until the action names the
+  // other: switching back is a decision, not a default. On the alternate
+  // fuel the plant takes no gas, so the supply cap, a nomination's cap and
+  // its settlement below all read zero gas. Absent `alternate_fuel`, `onAlt`
+  // is false and nothing here changes the 0.13.0 arithmetic.
+  const alt = diesel.alternate_fuel;
+  let fuelNow = state.fuel;
+  if (alt && action.fuel !== undefined && action.fuel !== fuelNow) {
+    if (action.fuel === PIPELINE_GAS || action.fuel === alt.id) fuelNow = action.fuel;
+    else notes.push(`fuel: there is no fuel ${String(action.fuel)}; the plant stays on ${fuelLabel(alt, fuelNow)}`);
+  }
+  const onAlt = alt !== undefined && fuelNow === alt.id;
+
   // -- natural gas (wire field: diesel_mw) ------------------------------------
   // An emergency order in force (#465) lifts the permit limit for the hour:
   // gas runs with no permit hours left, and the hour is counted against the
@@ -558,7 +597,7 @@ export function resolve(
     notes.push("natural gas: no permit hours remaining; clamped to 0");
     dsl = 0;
   }
-  if (option) {
+  if (option && !onAlt) {
     const available = option.available_mw[t]!;
     if (dsl > available) {
       notes.push(`natural gas: ${option.label} delivers ${round2(available)} MW this hour; clamped`);
@@ -568,7 +607,7 @@ export function resolve(
   // A nomination that is all the gas there is (#635): no gas can be bought
   // above it plus this hour's tolerance. Absent `caps_gas`, nothing runs.
   for (const c of pack.commitments ?? []) {
-    if (!c.caps_gas || !c.window.includes(t)) continue;
+    if (!c.caps_gas || !c.window.includes(t) || onAlt) continue;
     const cap = quantityAt(c, t, state, action) + toleranceAt(c, t, pack.events);
     if (dsl > cap) {
       notes.push(`natural gas: the ${c.label.toLowerCase()} allows ${round2(cap)} MW this hour; clamped`);
@@ -582,7 +621,7 @@ export function resolve(
   }
 
   if (pack.site.stocks && currentStocks) {
-    const stockClamp = calculateStockClamp(pack.site.stocks, currentStocks, dsl, stepH);
+    const stockClamp = calculateStockClamp(pack.site.stocks, currentStocks, dsl, stepH, fuelNow);
     if (stockClamp.wasClamped) {
       dsl = stockClamp.clampedDslMw;
       // The note is shown to the player beside the gas control (#268), so it
@@ -591,7 +630,7 @@ export function resolve(
       const what = (binding?.label ?? stockClamp.bindingStockId ?? "stock").toLowerCase();
       notes.push(`natural gas: not enough ${what} left; clamped to ${round2(dsl)}`);
     }
-    currentStocks = applyStockBurn(pack.site.stocks, currentStocks, dsl, stepH);
+    currentStocks = applyStockBurn(pack.site.stocks, currentStocks, dsl, stepH, fuelNow);
   }
 
   // -- energy balance & relief ----------------------------------------------
@@ -646,7 +685,9 @@ export function resolve(
       if (i !== -1) {
         const q = committed[c.id] ?? 0;
         if (c.kind === "nomination") {
-          const off = Math.max(0, Math.abs(dsl - q) - toleranceAt(c, t, pack.events));
+          // A nomination settles against the gas taken, none on the alternate fuel (#707).
+          const gasTaken = onAlt ? 0 : dsl;
+          const off = Math.max(0, Math.abs(gasTaken - q) - toleranceAt(c, t, pack.events));
           usd += off * (c.imbalance_usd_per_mwh ?? 0) * stepH;
         } else if (order) {
           usd += Math.max(0, q - relief) * (c.nonperformance_usd_per_mwh ?? 0) * stepH;
@@ -737,8 +778,11 @@ export function resolve(
 
   const credit = reliefCredit + absorptionCredit;
   // A fuel price series (#469) prices this turn's gas; absent, the scalar,
-  // so the expression below is the 0.7.0 one exactly.
-  const fuel = diesel.fuel_usd_per_mwh_series?.[t] ?? diesel.fuel_usd_per_mwh;
+  // so the expression below is the 0.7.0 one exactly. A turn on the
+  // alternate fuel (#707) is priced at that fuel's price.
+  const fuel = onAlt
+    ? alt.fuel_usd_per_mwh
+    : (diesel.fuel_usd_per_mwh_series?.[t] ?? diesel.fuel_usd_per_mwh);
   const operatingCost =
     gridImport * effectivePrice * stepH +
     dsl * fuel * stepH +
@@ -765,6 +809,9 @@ export function resolve(
     ...(commitApplied && { commit: commitApplied }),
     // The option actually taken, so replay() supplies exactly what was settled.
     ...(supplyApplied !== undefined && { supply: supplyApplied }),
+    // The fuel actually burned, every turn of a dual-fuel pack (#707), so
+    // replay() does not depend on what an earlier turn left the plant on.
+    ...(fuelNow !== undefined && { fuel: fuelNow }),
   };
 
   const nextShown = getNextShownFields(pack, state);
@@ -785,6 +832,7 @@ export function resolve(
     ...(state.order_hours_used !== undefined && {
       order_hours_used: state.order_hours_used + (dsl > 0 && waived ? 1 : 0),
     }),
+    ...(fuelNow !== undefined && { fuel: fuelNow }),
     ...nextShown,
   };
 
@@ -837,6 +885,11 @@ export function replay(pack: ScenarioPack, actions: Action[]): Final {
   let state = init(pack);
   for (const a of actions) state = resolve(pack, state, a).next;
   return finalize(pack, state);
+}
+
+/** A fuel's name for a note (#707): the alternate fuel's label, or gas. */
+function fuelLabel(alt: { id: string; label: string }, fuel: string | undefined): string {
+  return fuel === alt.id ? alt.label.toLowerCase() : "natural gas";
 }
 
 function clamp(
